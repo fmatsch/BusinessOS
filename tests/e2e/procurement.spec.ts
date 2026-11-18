@@ -85,6 +85,8 @@ test.describe.serial("Beschaffungsprozess Ende-zu-Ende (Browser)", () => {
     await login(page, "admin");
     await page.getByLabel("Organisation").selectOption({ label: "Beispiel AG" });
     await page.getByRole("button", { name: "OK" }).click();
+    // Erst weitermachen, wenn der Wechsel serverseitig wirksam ist (Server Action ist asynchron)
+    await expect(page.getByRole("heading", { name: "Beispiel AG", level: 1 })).toBeVisible();
     await page.goto("/cost-centers");
     await expect(page.getByRole("heading", { name: "Kostenstellen" })).toBeVisible();
     await expect(page.getByRole("cell", { name: cc, exact: true })).toHaveCount(0);
