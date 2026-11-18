@@ -27,6 +27,8 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Beschaffung (MVP-Prozess)**
 * `PurchaseRequest` 1—n `PurchaseRequestLine`; Status `DRAFT → SUBMITTED → APPROVED | REJECTED → ORDERED`
 * `Approval`: Freigabeschritt je Antrag (`MANAGER`, bei > 5.000 zusätzlich `FINANCE`), Reihenfolge über `sequence`, Entscheidung, Kommentar
+* `ApprovalPolicy`: versionierte Freigaberegel je Organisation/Objektart (`steps` als JSON, neue Version = neue Zeile); `PurchaseRequest.policyVersion` und `Approval.requiredPermission` halten den Stand beim Einreichen fest
+* `OutboxEvent`: `attempts`, `nextAttemptAt`, `lastError`, `failedAt` (Dead Letter); `Notification`: `dedupeKey` (eindeutig), `href`, `type`
 * `Sequence`: atomare Nummernkreise je Organisation (`PR-2026-0001`, `PO-2026-0001`)
 * `PurchaseOrder` 1—n `PurchaseOrderLine`, verweist auf `PurchaseRequest`, `Supplier`, `CostCenter`
 * `Budget` je `CostCenter` und Geschäftsjahr; *committed* = Summe offener Bestellungen (abgeleitet)

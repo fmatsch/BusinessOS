@@ -1,10 +1,12 @@
 import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
+import { runOutbox } from "@/modules/events";
 import { requireContext } from "@/platform/tenancy/context";
 import { can } from "@/platform/authz/authorize";
 import { NotFoundError } from "@/platform/errors";
 import { listCostCenters } from "@/modules/masterdata/service";
 import { createOrder, decideRequest, getRequest, listSuppliers } from "@/modules/procurement/service";
-import { STEP_PERMISSION } from "@/modules/procurement/rules";
+import type { Permission } from "@/platform/authz/permissions";
 import { formatMoney } from "@/lib/money";
 import { ErrorBanner, runAction } from "../../action-helpers";
 
@@ -13,7 +15,6 @@ export const dynamic = "force-dynamic";
 const STATUS: Record<string, string> = {
   DRAFT: "Entwurf", SUBMITTED: "Eingereicht", APPROVED: "Freigegeben", REJECTED: "Abgelehnt", ORDERED: "Bestellt",
 };
-const STEP: Record<string, string> = { MANAGER: "Führungskraft", FINANCE: "Finanzen" };
 const DECISION: Record<string, string> = { PENDING: "offen", APPROVED: "freigegeben", REJECTED: "abgelehnt" };
 
 async function decide(formData: FormData) {
@@ -23,6 +24,7 @@ async function decide(formData: FormData) {
   await runAction(`/procurement/${id}`, () =>
     decideRequest(ctx, { requestId: id, decision: formData.get("decision"), comment: formData.get("comment") || null }),
   );
+  after(() => runOutbox());
   redirect(`/procurement/${id}`);
 }
 
@@ -33,6 +35,7 @@ async function order(formData: FormData) {
   const result = await runAction(`/procurement/${id}`, () =>
     createOrder(ctx, { requestId: id, supplierId: formData.get("supplierId"), costCenterId: formData.get("costCenterId") }),
   );
+  after(() => runOutbox());
   redirect(`/procurement/${id}${result.overBudget ? "?error=" + encodeURIComponent("Bestellung angelegt – Budget der Kostenstelle ist damit überschritten.") : ""}`);
 }
 
@@ -44,7 +47,7 @@ export default async function RequestDetail({ params, searchParams }: { params: 
   try { r = await getRequest(ctx, id); } catch (e) { if (e instanceof NotFoundError) notFound(); throw e; }
 
   const nextStep = r.status === "SUBMITTED" ? r.approvals.find((a) => a.status === "PENDING") : undefined;
-  const canDecide = !!nextStep && r.requesterId !== ctx.userId && can(ctx, STEP_PERMISSION[nextStep.stepKey as keyof typeof STEP_PERMISSION]);
+  const canDecide = !!nextStep && r.requesterId !== ctx.userId && can(ctx, nextStep.requiredPermission as Permission);
   const canOrder = r.status === "APPROVED" && can(ctx, "procurement.order.create");
   const [suppliers, costCenters] = canOrder
     ? await Promise.all([listSuppliers(ctx), listCostCenters(ctx)])
@@ -73,7 +76,7 @@ export default async function RequestDetail({ params, searchParams }: { params: 
         <h2 className="mb-2 font-medium">Freigaben</h2>
         <ol className="space-y-1 text-sm">
           {r.approvals.map((a) => (
-            <li key={a.id}>{a.sequence}. {STEP[a.stepKey]}: {DECISION[a.status]}{a.decidedAt ? ` (${a.decidedAt.toLocaleString("de-AT", { timeZone: "Europe/Vienna" })})` : ""}{a.comment ? ` – ${a.comment}` : ""}</li>
+            <li key={a.id}>{a.sequence}. {a.label || a.stepKey}: {DECISION[a.status]}{a.decidedAt ? ` (${a.decidedAt.toLocaleString("de-AT", { timeZone: "Europe/Vienna" })})` : ""}{a.comment ? ` – ${a.comment}` : ""}</li>
           ))}
         </ol>
       </section>
@@ -83,7 +86,7 @@ export default async function RequestDetail({ params, searchParams }: { params: 
           <input type="hidden" name="requestId" value={r.id} />
           <label className="block">Kommentar (optional)<input name="comment" maxLength={500} className={input + " w-full"} /></label>
           <div className="flex gap-2">
-            <button name="decision" value="APPROVE" className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Freigeben ({STEP[nextStep!.stepKey]})</button>
+            <button name="decision" value="APPROVE" className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Freigeben ({nextStep!.label || nextStep!.stepKey})</button>
             <button name="decision" value="REJECT" className="rounded-md border border-line px-3 py-1.5">Ablehnen</button>
           </div>
         </form>

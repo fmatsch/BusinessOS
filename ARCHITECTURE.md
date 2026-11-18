@@ -47,7 +47,10 @@ prisma/                schema.prisma, Migrationen, seed.ts
 * Policy-Erweiterung: `authorize` kann zusätzlich Bedingungen prüfen (z. B. Betragsgrenze, eigener Datensatz).
 
 ## Domain Events & Outbox
-`OutboxEvent` wird in derselben Transaktion wie die Änderung geschrieben. Ein Dispatcher liest unverarbeitete Events, ruft Handler (Benachrichtigungen, Workflow-Trigger, Budget-Neuberechnung) und markiert sie mit Retry-Zähler. Idempotente Handler sind Pflicht.
+`OutboxEvent` wird in derselben Transaktion wie die Änderung geschrieben. `platform/events/dispatcher.ts` holt fällige Events mit `FOR UPDATE SKIP LOCKED`, führt die Handler (registriert in `modules/events.ts`) in einer Transaktion mit Savepoint aus, wiederholt mit exponentiellem Backoff und markiert nach 5 Fehlversuchen als fehlgeschlagen. „Mindestens einmal" – Handler müssen idempotent sein (z. B. `dedupeKey` bei Benachrichtigungen). Auslöser: `after()` nach Aktionen plus `npm run worker`.
+
+## Genehmigungen
+`platform/approvals`: versionierte Regel je Organisation und Objektart (`ApprovalPolicy`), Schritte mit Berechtigung und optionalem Mindestbetrag. Beim Einreichen werden die nötigen Schritte samt Berechtigung als Schnappschuss in `Approval` gespeichert; spätere Regeländerungen betreffen nur neue Vorgänge.
 
 ## Workflow-Engine (Phase 3)
 * `WorkflowDefinition` ist versioniert (unveränderliche Versionen, neue Version bei Änderung).

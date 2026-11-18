@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ForbiddenError, type Ctx } from "@/platform/authz/authorize";
 import { PERMISSIONS, SYSTEM_ROLES, type Permission } from "@/platform/authz/permissions";
+import { publishPolicy, readPolicy } from "@/platform/approvals/policy";
 import { budgetOverview, committedByDepartment, setBudget } from "./budget/service";
 import { createCostCenter, createDepartment, listCostCenters, listDepartments } from "./masterdata/service";
 import { createOrder, createRequest, createSupplier, getRequest, listOrders, listRequests, listSuppliers } from "./procurement/service";
@@ -31,6 +32,8 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["budgetOverview", "finance.budget.read", () => budgetOverview(none, 2026)],
   ["committedByDepartment", "finance.budget.read", () => committedByDepartment(none, 2026)],
   ["setBudget", "finance.budget.write", () => setBudget(none, valid.budget)],
+  ["publishPolicy", "org.settings.manage", () => publishPolicy(none, [])],
+  ["readPolicy", "org.settings.manage", () => readPolicy(none)],
 ];
 
 describe("Autorisierungsmatrix: Services", () => {

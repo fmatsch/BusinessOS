@@ -1,6 +1,6 @@
 # Modulplanung: Workforce (Dienstplan, Arbeitszeit, Abrechnung) und weitere Module
 
-Status: **Plan, nichts davon ist umgesetzt.** Grundlage sind die bestehenden Regeln aus [CLAUDE.md](CLAUDE.md) und [ARCHITECTURE.md](ARCHITECTURE.md).
+Status: **Plan. Entschieden (2026-11-18): Abrechnung = zuerst Lohn-Export (B), Kundenabrechnung (A) später; Start mit M6.** Umgesetzt wird meilensteinweise, Stand siehe [ROADMAP.md](ROADMAP.md). Grundlage sind die bestehenden Regeln aus [CLAUDE.md](CLAUDE.md) und [ARCHITECTURE.md](ARCHITECTURE.md).
 Rechtliche Hinweise sind Arbeitsannahmen für die Planung, **keine Rechtsberatung** – vor der Umsetzung mit Steuerberatung/Jurist und ggf. Betriebsrat klären.
 
 ## 1. Ziel und Abgrenzung

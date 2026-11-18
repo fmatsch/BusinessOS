@@ -5,7 +5,10 @@ import { writeAudit } from "@/platform/audit/audit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { budgetOf, committedOf, fiscalYearRange } from "@/modules/budget/queries";
 import { decisionInput, orderInput, requestInput, supplierInput } from "./schema";
-import { computeTotal, requiredSteps, STEP_PERMISSION } from "./rules";
+import { computeTotal } from "./rules";
+import { stepsFor } from "@/platform/approvals/engine";
+import { getActivePolicy, PURCHASE_REQUEST } from "@/platform/approvals/policy";
+import type { Permission } from "@/platform/authz/permissions";
 
 async function nextNumber(tx: Prisma.TransactionClient, organizationId: string, prefix: string) {
   const year = new Date().getFullYear();
@@ -84,7 +87,8 @@ export async function createRequest(ctx: Ctx, raw: unknown) {
       const cc = await tx.costCenter.findFirst({ where: { id: input.costCenterId, organizationId: ctx.organizationId, active: true } });
       if (!cc) throw new NotFoundError("Kostenstelle");
     }
-    const steps = requiredSteps(total);
+    const policy = await getActivePolicy(tx, ctx.organizationId, PURCHASE_REQUEST);
+    const steps = stepsFor(policy.steps, total);
     const request = await tx.purchaseRequest.create({
       data: {
         organizationId: ctx.organizationId,
@@ -94,17 +98,20 @@ export async function createRequest(ctx: Ctx, raw: unknown) {
         costCenterId: input.costCenterId ?? null,
         status: "SUBMITTED",
         submittedAt: new Date(),
+        policyVersion: policy.version,
         currency: org.currency,
         totalAmount: total,
         lines: { create: input.lines.map((l) => ({ description: l.description, quantity: l.quantity, unitPrice: l.unitPrice })) },
         approvals: {
-          create: steps.map((stepKey, i) => ({ organizationId: ctx.organizationId, stepKey, sequence: i + 1 })),
+          create: steps.map((step, i) => ({
+            organizationId: ctx.organizationId, stepKey: step.key, label: step.label, requiredPermission: step.permission, sequence: i + 1,
+          })),
         },
       },
     });
     await writeAudit(tx, ctx, {
       action: "purchase_request.submit", entityType: "PurchaseRequest", entityId: request.id,
-      after: { number: request.number, total: total.toString(), steps },
+      after: { number: request.number, total: total.toString(), policyVersion: policy.version, steps: steps.map((x) => x.key) },
     });
     await emit(tx, ctx, "purchase_request.submitted", { requestId: request.id, total: total.toString() });
     return request;
@@ -113,13 +120,13 @@ export async function createRequest(ctx: Ctx, raw: unknown) {
 
 /** Offene Freigaben, die der Benutzer mit seinen Rechten entscheiden darf (nächster offener Schritt). */
 export async function listPendingApprovals(ctx: Ctx) {
-  const steps = (["MANAGER", "FINANCE"] as const).filter((k) => can(ctx, STEP_PERMISSION[k]));
-  if (steps.length === 0) return [];
+  const mine = [...ctx.permissions];
+  if (mine.length === 0) return [];
   const pending = await db.approval.findMany({
     where: {
       organizationId: ctx.organizationId,
       status: "PENDING",
-      stepKey: { in: [...steps] },
+      requiredPermission: { in: mine },
       request: { status: "SUBMITTED", requesterId: { not: ctx.userId } },
     },
     include: { request: true },
@@ -149,7 +156,7 @@ export async function decideRequest(ctx: Ctx, raw: unknown) {
 
     const step = request.approvals.find((a) => a.status === "PENDING");
     if (!step) throw new ConflictError("Kein offener Freigabeschritt");
-    authorize(ctx, STEP_PERMISSION[step.stepKey as keyof typeof STEP_PERMISSION]);
+    authorize(ctx, step.requiredPermission as Permission);
     if (request.requesterId === ctx.userId) throw new ConflictError("Eigene Anforderungen dürfen nicht selbst freigegeben werden");
 
     // Bedingtes Update verhindert Doppelentscheidungen bei parallelen Anfragen
@@ -174,9 +181,8 @@ export async function decideRequest(ctx: Ctx, raw: unknown) {
       entityType: "PurchaseRequest", entityId: request.id,
       after: { step: step.stepKey, resulting: newStatus, comment: input.comment ?? null },
     });
-    if (newStatus !== "SUBMITTED") {
-      await emit(tx, ctx, `purchase_request.${newStatus.toLowerCase()}`, { requestId: request.id });
-    }
+    // Zwischenstand und Endzustand lösen jeweils ein Event aus (Benachrichtigung der nächsten Freigeber bzw. des Antragstellers)
+    await emit(tx, ctx, newStatus === "SUBMITTED" ? "purchase_request.step_approved" : `purchase_request.${newStatus.toLowerCase()}`, { requestId: request.id });
     return { status: newStatus };
   });
 }

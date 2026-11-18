@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { runOutbox } from "@/modules/events";
 import { requireContext } from "@/platform/tenancy/context";
 import { can } from "@/platform/authz/authorize";
 import { listCostCenters } from "@/modules/masterdata/service";
@@ -25,6 +27,7 @@ async function create(formData: FormData) {
   const request = await runAction("/procurement", () =>
     createRequest(ctx, { title: formData.get("title"), costCenterId: formData.get("costCenterId") || null, lines }),
   );
+  after(() => runOutbox()); // Benachrichtigungen zeitnah zustellen (Worker holt Versäumtes nach)
   redirect(`/procurement/${request.id}`);
 }
 
@@ -78,7 +81,7 @@ export default async function ProcurementPage({ searchParams }: { searchParams: 
             {pending.map((a) => (
               <li key={a.id} className="flex justify-between px-4 py-2">
                 <Link className="text-accent underline" href={`/procurement/${a.requestId}`}>{a.request.number} · {a.request.title}</Link>
-                <span>{formatMoney(a.request.totalAmount.toString(), a.request.currency)} · Schritt {a.stepKey === "FINANCE" ? "Finanzen" : "Führungskraft"}</span>
+                <span>{formatMoney(a.request.totalAmount.toString(), a.request.currency)} · Schritt {a.label || a.stepKey}</span>
               </li>
             ))}
           </ul>

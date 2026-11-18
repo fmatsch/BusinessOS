@@ -47,8 +47,18 @@ test.describe.serial("Beschaffungsprozess Ende-zu-Ende (Browser)", () => {
     await logout(page);
   });
 
-  test("Führungskraft gibt frei", async ({ page }) => {
+  // Benachrichtigungen werden asynchron über die Outbox zugestellt: kurz neu laden, bis sie erscheint
+  async function expectNotification(page: import("@playwright/test").Page, text: RegExp) {
+    await page.goto("/notifications");
+    await expect
+      .poll(async () => { await page.reload(); return page.getByText(text).count(); }, { timeout: 20_000, intervals: [500, 1000, 2000] })
+      .toBeGreaterThan(0);
+  }
+
+  test("Führungskraft wird benachrichtigt und gibt frei", async ({ page }) => {
     await login(page, "manager");
+    await expectNotification(page, new RegExp(title));
+    await expect(page.getByTestId("unread-count")).toBeVisible();
     await page.goto("/procurement");
     await page.getByRole("row", { name: new RegExp(title) }).getByRole("link").click();
     await page.getByRole("button", { name: /Freigeben/ }).click();
@@ -58,6 +68,7 @@ test.describe.serial("Beschaffungsprozess Ende-zu-Ende (Browser)", () => {
 
   test("Finanzen legt die Bestellung an; Budget ist überschritten", async ({ page }) => {
     await login(page, "finance");
+    await expectNotification(page, new RegExp(`Bestellung anlegen: PR-.*`));
     await page.goto("/procurement");
     await page.getByRole("row", { name: new RegExp(title) }).getByRole("link").click();
     await page.getByLabel("Lieferant").selectOption({ label: `${supplier} · Lieferant ${s}` });
@@ -78,6 +89,9 @@ test.describe.serial("Beschaffungsprozess Ende-zu-Ende (Browser)", () => {
     await page.goto("/audit");
     for (const action of ["purchase_order.create", "purchase_request.approve_step", "purchase_request.submit", "budget.set"])
       await expect(page.getByRole("cell", { name: action, exact: true }).first()).toBeVisible();
+    await page.goto("/settings/approvals");
+    await expect(page.getByRole("heading", { name: /Freigaberegeln/ })).toBeVisible();
+    await expect(page.getByText(/Aktuell gilt Version \d+/)).toBeVisible();
     await logout(page);
   });
 

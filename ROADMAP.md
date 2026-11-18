@@ -50,10 +50,19 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⚠️ Keine Lasttests, keine Penetrationstests, kein Dependency-/Secret-Scanning in CI
 * ⚠️ CSP erlaubt `'unsafe-inline'` für Skripte (Next.js ohne Nonce)
 
-## Danach
-Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md).
+## M6 – Plattform-Bausteine (Voraussetzung für Workforce)
+* ✅ Outbox-Dispatcher: `FOR UPDATE SKIP LOCKED` (kein Doppelverarbeiten bei parallelen Prozessen), Handler laufen in der Transaktion mit Savepoint (Fehler rollt nur den Handler zurück), exponentielles Backoff, Dead Letter nach 5 Versuchen
+* ✅ Auslösung: unmittelbar nach Beschaffungs-Aktionen (`after()`), dazu `npm run worker` als Hintergrundprozess, der Versäumtes nachholt
+* ✅ Benachrichtigungen: idempotent (`dedupeKey`), Glocke mit Ungelesen-Zähler, Seite `/notifications`; Beschaffung benachrichtigt Freigeber, Antragsteller und Einkauf
+* ✅ Genehmigungs-Engine: Freigabeschritte kommen aus einer **versionierten Regel** je Organisation (`/settings/approvals`); laufende Vorgänge behalten Schritte und Berechtigung (Schnappschuss), neue Regel gilt nur für neue Vorgänge
+* ✅ Beschaffung nutzt die Engine statt fester Konstanten (Altdaten per Migration übernommen)
+* ⚠️ Kein Überwachungs-/Alarmierungskanal für Dead Letters (nur Spalten `failedAt`/`lastError`); keine E-Mail-/Push-Zustellung (nur In-App)
+* ⚠️ Regeleditor begrenzt: max. 3 Schritte in der Oberfläche, nur Beschaffungs-Berechtigungen, Bedingung nur „Betrag über X"
+* ⚠️ Gleichzeitiges Veröffentlichen zweier Regelversionen endet für eine Seite in einem Fehler (eindeutige Version)
 
-* ⬜ M6 Plattform-Bausteine (Outbox-Dispatcher, Benachrichtigungen, Genehmigungs-Engine)
-* ⬜ M7 HR-Basis · M8 Dienstplanung · M9 Zeiterfassung · M10 Abrechnung (Lohn-Export, später Kundenabrechnung)
+## Danach
+Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
+
+* ⬜ M7 HR-Basis · M8 Dienstplanung · M9 Zeiterfassung · M10 Lohn-Export, später Kundenabrechnung
 * ⬜ M11 Projekte · M12 Finance (Doppik) · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

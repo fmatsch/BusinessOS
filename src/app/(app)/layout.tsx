@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { requireContext } from "@/platform/tenancy/context";
+import { unreadCount } from "@/platform/notifications/service";
 import { LANG_COOKIE, t, type Locale } from "@/lib/i18n";
 import { logout, setLanguage, switchOrganization } from "./actions";
 
@@ -20,10 +21,12 @@ const NAV = [
   { href: "/planned/analytics", key: "nav.analytics" },
   { href: "/copilot", key: "nav.copilot", live: true },
   { href: "/audit", key: "nav.audit", live: true },
+  { href: "/settings/approvals", key: "nav.approvals", live: true },
 ] as const;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireContext();
+  const unread = await unreadCount(ctx);
   const locale: Locale = (await cookies()).get(LANG_COOKIE)?.value === "en" ? "en" : "de";
 
   return (
@@ -57,6 +60,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <button name="lang" value="de" className="rounded px-2 py-1 hover:bg-bg" aria-pressed={locale === "de"}>DE</button>
               <button name="lang" value="en" className="rounded px-2 py-1 hover:bg-bg" aria-pressed={locale === "en"}>EN</button>
             </form>
+            <Link href="/notifications" className="rounded px-2 py-1 hover:bg-bg" aria-label={unread > 0 ? `Benachrichtigungen, ${unread} ungelesen` : "Benachrichtigungen"}>
+              Benachrichtigungen{unread > 0 && <span className="ml-1 rounded-full bg-accent px-2 py-0.5 text-xs text-accent-fg" data-testid="unread-count">{unread}</span>}
+            </Link>
             <span className="text-muted">{ctx.userName}</span>
             <form action={logout}><button className="rounded-md border border-line px-2 py-1">{t(locale, "logout")}</button></form>
           </div>

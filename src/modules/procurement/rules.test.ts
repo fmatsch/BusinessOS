@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeTotal, requiredSteps } from "./rules";
+import { computeTotal } from "./rules";
 
 describe("computeTotal", () => {
   it("rechnet ohne Gleitkommafehler", () => {
@@ -8,14 +8,5 @@ describe("computeTotal", () => {
       { quantity: "1", unitPrice: "0.2" },
     ]);
     expect(t.toString()).toBe("0.5");
-  });
-});
-
-describe("requiredSteps", () => {
-  it("genau 5.000 braucht nur die Führungskraft", () => {
-    expect(requiredSteps("5000")).toEqual(["MANAGER"]);
-  });
-  it("über 5.000 braucht zusätzlich Finanzen", () => {
-    expect(requiredSteps("5000.01")).toEqual(["MANAGER", "FINANCE"]);
   });
 });

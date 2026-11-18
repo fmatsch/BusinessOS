@@ -37,6 +37,7 @@ model Organization {
   budgets         Budget[]
   approvals       Approval[]
   sequences       Sequence[]
+  approvalPolicies ApprovalPolicy[]
   auditLogs       AuditLog[]
   outbox          OutboxEvent[]
   notifications   Notification[]
@@ -125,9 +126,14 @@ model OutboxEvent {
   payload        Json
   attempts       Int          @default(0)
   processedAt    DateTime?
+  /// frühester nächster Versuch (exponentielles Backoff)
+  nextAttemptAt  DateTime     @default(now())
+  lastError      String?
+  /// gesetzt, wenn die maximale Zahl Versuche erschöpft ist (Dead Letter)
+  failedAt       DateTime?
   createdAt      DateTime     @default(now())
 
-  @@index([processedAt, createdAt])
+  @@index([processedAt, failedAt, nextAttemptAt])
 }
 
 model Notification {
@@ -137,7 +143,11 @@ model Notification {
   userId         String
   title          String
   body           String?
+  type           String       @default("info")
+  href           String?
   readAt         DateTime?
+  /// verhindert Doppelzustellung bei Wiederholung eines Events
+  dedupeKey      String?      @unique
   createdAt      DateTime     @default(now())
 
   @@index([organizationId, userId, readAt])
@@ -222,6 +232,8 @@ model PurchaseRequest {
   updatedAt      DateTime              @updatedAt
 
   submittedAt    DateTime?
+  /// Version der Freigaberegel, die beim Einreichen galt (unveränderlich)
+  policyVersion  Int?
   lines          PurchaseRequestLine[]
   orders         PurchaseOrder[]
   approvals      Approval[]
@@ -285,7 +297,10 @@ model Approval {
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   requestId      String
   request        PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  stepKey        String // MANAGER | FINANCE
+  stepKey        String
+  label          String          @default("")
+  /// Schnappschuss der nötigen Berechtigung aus der Freigaberegel
+  requiredPermission String
   sequence       Int
   status         ApprovalStatus  @default(PENDING)
   decidedById    String?
@@ -304,4 +319,18 @@ model Sequence {
   value          Int          @default(0)
 
   @@id([organizationId, key])
+}
+
+/// Versionierte Freigaberegel je Objektart. Neue Version = neue Zeile; laufende Vorgänge behalten ihre Version.
+model ApprovalPolicy {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subjectType    String // z. B. PURCHASE_REQUEST
+  version        Int
+  steps          Json // [{ key, label, permission, minAmount? }]
+  createdById    String?
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, subjectType, version])
 }

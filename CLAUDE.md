@@ -14,7 +14,8 @@ Modularer Monolith: Next.js (App Router) + TypeScript strict + Prisma/PostgreSQL
 3. **Keine Geschäftslogik in Routen/Komponenten** – nur in `modules/<domain>/service.ts`.
 4. **Modulgrenzen**: andere Module nur über `service.ts`/`queries.ts` ansprechen; `platform/` importiert keine Fachmodule (erzwungen in `src/architecture.test.ts`).
 5. **Geld** immer `Decimal` (`decimal.js`/Prisma), nie `number`.
-6. **Schreibende Operationen** laufen in `prisma.$transaction` und schreiben AuditLog + ggf. OutboxEvent atomar.
+6. **Events**: Handler sind idempotent (dedupeKey) und lesen nur innerhalb `event.organizationId`; Freigaben laufen über `platform/approvals` (nie feste Schwellen im Code).
+6a. **Schreibende Operationen** laufen in `prisma.$transaction` und schreiben AuditLog + ggf. OutboxEvent atomar.
 7. **Gebuchte Finanzdaten** nie ändern/löschen – Storno-Buchung.
 8. **Validierung** mit Zod an jeder Eingabegrenze.
 9. **KI** nur über Tools, die Services mit Benutzerkontext aufrufen; nie freies SQL; Änderungen nur nach Bestätigung.

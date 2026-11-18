@@ -34,6 +34,7 @@ npx prisma migrate dev        # Schema anlegen
 npm run db:seed               # Demo-Daten (rein synthetisch)
 # Ohne Docker: npm run db:dev startet eine lokale PostgreSQL (Port 54329), nur für Entwicklung
 npm run dev                   # http://localhost:3000
+npm run worker                # optional: Hintergrundprozess für Events/Benachrichtigungen (Fallback zu after())
 ```
 
 Demo-Login steht in `prisma/seed.ts` (synthetische Daten, nur für lokale Entwicklung).
