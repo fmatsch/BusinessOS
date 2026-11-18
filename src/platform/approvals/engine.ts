@@ -9,6 +9,8 @@ export const APPROVER_PERMISSIONS = [
   "hr.absence.approve",
   "hr.absence.approve_all",
   "crm.quote.approve",
+  "expense.approve",
+  "expense.approve_all",
 ] as const;
 
 export const policyStepSchema = z.object({
@@ -42,6 +44,11 @@ export const DEFAULT_ABSENCE_POLICY: PolicyStep[] = [
   { key: "MANAGER", label: "Führungskraft", permission: "hr.absence.approve" },
 ];
 
+export const DEFAULT_EXPENSE_POLICY: PolicyStep[] = [
+  { key: "MANAGER", label: "Führungskraft", permission: "expense.approve" },
+  { key: "FINANCE", label: "Finanzen", permission: "expense.approve_all", minAmount: "1000" },
+];
+
 export const DEFAULT_QUOTE_POLICY: PolicyStep[] = [
   { key: "SALES_LEAD", label: "Vertriebsleitung", permission: "crm.quote.approve" },
 ];
@@ -51,6 +58,7 @@ export const DEFAULT_POLICIES: Record<string, PolicyStep[]> = {
   PURCHASE_REQUEST: DEFAULT_PURCHASE_POLICY,
   ABSENCE_REQUEST: DEFAULT_ABSENCE_POLICY,
   QUOTE: DEFAULT_QUOTE_POLICY,
+  EXPENSE_REPORT: DEFAULT_EXPENSE_POLICY,
 };
 
 /** Die für diesen Betrag nötigen Schritte in Reihenfolge. */

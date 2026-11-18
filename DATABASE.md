@@ -78,6 +78,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Bankabgleich**
 `BankImport` (Datei-Prüfsumme je Organisation eindeutig) und `BankLine` (Betrag mit Vorzeichen, `dedupeKey` je Organisation eindeutig; Status OPEN/MATCHED/IGNORED, Zuordnung `matchKind`/`matchedId`).
 
+**Spesen**
+`ExpenseReport` + `ExpenseLine` (Beleg über `FinanceFile`), `ExpenseSettings` (Kilometersatz). `Approval.expenseReportId` erweitert die Freigabe (CHECK: genau ein Bezug aus vier).
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

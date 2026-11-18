@@ -7,6 +7,7 @@ import { DEFAULT_POLICIES, policyStepsSchema, type PolicyStep } from "./engine";
 export const PURCHASE_REQUEST = "PURCHASE_REQUEST";
 export const ABSENCE_REQUEST = "ABSENCE_REQUEST";
 export const QUOTE = "QUOTE";
+export const EXPENSE_REPORT = "EXPENSE_REPORT";
 
 export interface ActivePolicy {
   version: number;

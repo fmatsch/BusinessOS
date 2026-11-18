@@ -202,6 +202,11 @@ export const safeFileName = (name: string) => (name.split(/[\\/]/).pop() ?? "bel
 
 export async function uploadFile(ctx: Ctx, input: { name: string; bytes: Uint8Array }) {
   authorize(ctx, "finance.invoice.in.create");
+  return storeVerifiedFile(ctx, input);
+}
+
+/** Für andere Module (Spesenbelege): speichert eine Datei nach Inhaltsprüfung. Die Berechtigung prüft der Aufrufer. */
+export async function storeVerifiedFile(ctx: Ctx, input: { name: string; bytes: Uint8Array }) {
   if (input.bytes.length === 0) throw new ConflictError("Die Datei ist leer");
   if (input.bytes.length > MAX_FILE_BYTES) throw new ConflictError("Die Datei ist größer als 8 MB");
   const mime = sniffMime(input.bytes);
@@ -218,6 +223,11 @@ export async function uploadFile(ctx: Ctx, input: { name: string; bytes: Uint8Ar
 
 export async function getFile(ctx: Ctx, id: string) {
   authorize(ctx, "finance.invoice.read");
+  return loadVerifiedFile(ctx, id);
+}
+
+/** Für andere Module: liest eine Datei der Organisation mit Integritätsprüfung. Die Berechtigung prüft der Aufrufer. */
+export async function loadVerifiedFile(ctx: Ctx, id: string) {
   const f = await db.financeFile.findFirst({ where: { id, organizationId: ctx.organizationId } });
   if (!f) throw new NotFoundError("Beleg");
   if (sha256Hex(f.data) !== f.sha256) throw new Error("Integritätsprüfung fehlgeschlagen: Belegdatei weicht vom Upload ab");

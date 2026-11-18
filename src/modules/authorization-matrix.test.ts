@@ -6,6 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import { addExpenseLine, cancelExpenseReport, createExpenseReport, decideExpenseReport, getExpenseReceipt, getExpenseReport, listExpenseReports, listPendingExpenseApprovals, markExpensePaid, removeExpenseLine, setMileageRate, submitExpenseReport } from "./expenses/service";
 import { acceptExactSuggestions, candidatesForLine, ignoreBankLine, importBankStatement, listBankLines, matchBankLine, reopenBankLine, unmatchBankLine } from "./finance/bank-service";
 import { billProject, bookProjectTime, createProject, getProject, listProjects, reverseProjectTime, setProjectStatus } from "./projects/service";
 import { acceptQuote, addActivity, anonymizeContact, cancelQuote, createContact, createQuote, declineQuote, decideQuote, duplicateQuote, getCrmCustomer, getQuote, getQuotePdf, listCrmCustomers, listPendingQuoteApprovals, listQuotes, sendQuote, submitQuote } from "./crm/service";
@@ -103,6 +104,17 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["createExpenseReport", "expense.submit", () => createExpenseReport(none, { title: "x" })],
+  ["addExpenseLine", "expense.submit", () => addExpenseLine(none, {})],
+  ["removeExpenseLine", "expense.submit", () => removeExpenseLine(none, "x")],
+  ["submitExpenseReport", "expense.submit", () => submitExpenseReport(none, "x")],
+  ["cancelExpenseReport", "expense.submit", () => cancelExpenseReport(none, "x")],
+  ["getExpenseReport", "expense.submit", () => getExpenseReport(none, "x")],
+  ["getExpenseReceipt", "expense.submit", () => getExpenseReceipt(none, "x")],
+  ["listExpenseReports (alle)", "expense.read_all", () => listExpenseReports(none, "all")],
+  ["listExpenseReports (Team)", "expense.approve", () => listExpenseReports(none, "team")],
+  ["markExpensePaid", "expense.pay", () => markExpensePaid(none, { reportId: "x", paidOn: "2027-01-01" })],
+  ["setMileageRate", "finance.master.write", () => setMileageRate(none, "0.5")],
   ["importBankStatement", "finance.bank.manage", () => importBankStatement(none, { filename: "a.csv", content: "x" })],
   ["listBankLines", "finance.bank.manage", () => listBankLines(none)],
   ["candidatesForLine", "finance.bank.manage", () => candidatesForLine(none, "x")],
@@ -235,7 +247,7 @@ describe("Autorisierungsmatrix: Rollen", () => {
   });
   it("Mitarbeiter dürfen nur anfordern und Stammdaten lesen – nichts schreiben oder freigeben", () => {
     const perms = SYSTEM_ROLES.employee!.permissions;
-    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.time.book"].includes(p))).toEqual([]);
+    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.time.book", "expense.submit"].includes(p))).toEqual([]);
   });
   it("Budgets ändern dürfen nur Finanzen und Inhaber", () => {
     expect(roles("finance.budget.write")).toEqual(["finance", "owner"]);

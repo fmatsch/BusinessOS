@@ -344,6 +344,8 @@ model Approval {
   absenceRequest     AbsenceRequest?  @relation(fields: [absenceRequestId], references: [id], onDelete: Cascade)
   quoteId            String?
   quote              Quote?           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  expenseReportId    String?
+  expenseReport      ExpenseReport?   @relation(fields: [expenseReportId], references: [id], onDelete: Cascade)
   stepKey            String
   label              String           @default("")
   /// Schnappschuss der nötigen Berechtigung aus der Freigaberegel
@@ -357,6 +359,7 @@ model Approval {
   @@unique([requestId, sequence])
   @@unique([absenceRequestId, sequence])
   @@unique([quoteId, sequence])
+  @@unique([expenseReportId, sequence])
   @@index([organizationId, status])
 }
 
@@ -998,6 +1001,59 @@ model SupplierInvoiceLine {
   taxCodeId        String
   expenseAccountId String
   costCenterId     String?
+}
+
+// ───────── Reisekosten und Spesen ─────────
+
+/// Einstellungen der Spesenabrechnung je Organisation (z. B. Kilometergeld je km)
+model ExpenseSettings {
+  organizationId String  @id
+  mileageRate    Decimal @default(0.50) @db.Decimal(9, 4)
+}
+
+/// Spesenabrechnung einer Person. DRAFT → SUBMITTED (Freigabe laut Regel) → APPROVED → PAID; REJECTED/CANCELLED enden.
+model ExpenseReport {
+  id             String    @id @default(cuid())
+  organizationId String
+  employeeId     String
+  /// EX-2027-0001, vergeben beim Einreichen
+  number         String?
+  title          String
+  tripFrom       DateTime? @db.Date
+  tripTo         DateTime? @db.Date
+  costCenterId   String?
+  status         String    @default("DRAFT")
+  currency       String    @default("EUR")
+  /// Summe der Positionen (brutto, wie ausgelegt)
+  totalAmount    Decimal   @default(0) @db.Decimal(19, 4)
+  policyVersion  Int?
+  note           String?
+  submittedAt    DateTime?
+  decidedAt      DateTime?
+  paidOn         DateTime? @db.Date
+  paidById       String?
+  createdAt      DateTime  @default(now())
+
+  lines     ExpenseLine[]
+  approvals Approval[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, employeeId])
+  @@index([organizationId, status])
+}
+
+model ExpenseLine {
+  id            String        @id @default(cuid())
+  reportId      String
+  report        ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  date          DateTime      @db.Date
+  /// TRAVEL | ACCOMMODATION | MEALS | MILEAGE | OTHER
+  category      String
+  description   String
+  /// bei Kilometergeld: gefahrene km
+  quantity      Decimal?      @db.Decimal(9, 2)
+  amount        Decimal       @db.Decimal(19, 4)
+  receiptFileId String?
 }
 
 // ───────── Bankabgleich ─────────

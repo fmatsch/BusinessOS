@@ -157,6 +157,12 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ⚠️ Keine Bankanbindung (Datei-Upload); keine Teil- und Sammelzahlungen, keine Fremdwährung; MT940 und bankspezifische CSV-Layouts nur soweit die Spaltenüberschriften erkannt werden; kein Zahlungsvorschlag/Überweisungsdatei
 * ✅ Berechtigung `finance.bank.manage` (Finanzen, Inhaber)
 
+## Reisekosten und Spesen
+* ✅ Spesenabrechnung: Titel, Reisezeitraum, Kostenstelle, Positionen (Fahrt, Unterkunft, Verpflegung, Kilometergeld, Sonstiges) mit Beleg (PDF/PNG/JPEG nach Inhaltsprüfung), Kilometergeld nach einstellbarem Satz je Organisation
+* ✅ Einreichen mit Nummer (EX-JJJJ-NNNN), danach unveränderlich; Freigabe laut Regel (Objektart EXPENSE_REPORT: Führungskraft; ab 1.000 € zusätzlich Finanzen – konfigurierbar), nicht die eigene Abrechnung, Führungskraft-Stufe nur für das eigene Team; Ablehnung mit Begründung
+* ✅ Auszahlung vermerken (Finanzen); Sichtbarkeit: eigene, Team, alle (Finanzen/Inhaber); Belege nur für Berechtigte
+* ⚠️ Keine Vorsteuerberechnung, keine Tagegeld-/Nächtigungspauschalen, keine Fremdwährung; Auszahlung wird nur vermerkt (keine Überweisung, kein Bankabgleich, kein Export in Lohn/Buchhaltung); Spesen fließen nicht in das Budget „Ist“ ein
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 

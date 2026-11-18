@@ -69,6 +69,11 @@ export const PERMISSIONS = [
   "project.time.read_all",
   "project.bill",
   "finance.bank.manage",
+  "expense.submit",
+  "expense.approve",
+  "expense.approve_all",
+  "expense.read_all",
+  "expense.pay",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -114,6 +119,10 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "crm.quote.create",
       "crm.contact.erase",
       "finance.bank.manage",
+      "expense.submit",
+      "expense.approve_all",
+      "expense.read_all",
+      "expense.pay",
       "project.read",
       "project.manage",
       "project.time.book",
@@ -187,6 +196,8 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "time.period.approve",
       "crm.read",
       "crm.quote.approve",
+      "expense.submit",
+      "expense.approve",
       "project.read",
       "project.manage",
       "project.time.book",
@@ -195,6 +206,6 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
   },
   employee: {
     name: "Mitarbeiter",
-    permissions: ["master.department.read", "master.costcenter.read", "procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.read", "project.time.book"],
+    permissions: ["master.department.read", "master.costcenter.read", "procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.read", "project.time.book", "expense.submit"],
   },
 };
