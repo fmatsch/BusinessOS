@@ -120,3 +120,9 @@ export const exportInput = z.object({
 });
 
 export const paidInput = z.object({ id: z.string().min(1), paidOn: isoDate });
+
+export const dunningInput = z.object({
+  invoiceId: z.string().min(1),
+  feeAmount: decimalString.refine((d) => d.gte(0) && d.lte(1000) && d.decimalPlaces() <= 2, "Gebühr: 0–1.000, höchstens 2 Nachkommastellen").default("0" as never),
+  note: optText(300),
+});

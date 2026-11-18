@@ -93,10 +93,10 @@ export function fmtAmount(v: string | Decimal, decimals = 2) {
 }
 
 const fmtQty = (v: string) => fmtAmount(v, 4).replace(/,?0+$/, "").replace(/,$/, "");
-const fmtDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+export const fmtDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 
 /** Fußzeile: Bankverbindung, Firmenbuch, Kontakt (nur vorhandene Angaben). */
-function footerLines(inv: InvoicePdfInput): string[] {
+export function footerLines(inv: { issuerDetails?: IssuerDetails | null }): string[] {
   const i = inv.issuerDetails;
   if (!i) return [];
   const bank = [i.bankName, i.iban ? `IBAN ${i.iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim()}` : "", i.bic ? `BIC ${i.bic}` : ""].filter(Boolean).join(" · ");
@@ -104,9 +104,9 @@ function footerLines(inv: InvoicePdfInput): string[] {
   return [bank, i.companyRegister ?? "", contact].filter((x) => x.trim() !== "");
 }
 
-const PAGE_W = 595, PAGE_H = 842, MARGIN = 56, BOTTOM = 100;
+export const PAGE_W = 595, PAGE_H = 842, MARGIN = 56, BOTTOM = 100;
 
-class Page {
+export class Page {
   ops: string[] = [];
   text(x: number, y: number, s: string, size = 10, bold = false) { this.ops.push(`BT /${bold ? "F2" : "F1"} ${size} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td ${pdfString(s)} Tj ET`); }
   right(xRight: number, y: number, s: string, size = 10, bold = false) { this.text(xRight - textWidth(s, size, bold), y, s, size, bold); }
@@ -205,7 +205,7 @@ export function renderInvoicePdf(inv: InvoicePdfInput): Uint8Array {
 }
 
 /** Baut die PDF-Struktur (Katalog, Seiten, zwei Schriften, Inhaltsströme, Kreuzverweistabelle). */
-function assemble(pages: Page[]): Uint8Array {
+export function assemble(pages: Page[]): Uint8Array {
   const objs: string[] = [];
   const add = (s: string) => { objs.push(s); return objs.length; };
   add("<< /Type /Catalog /Pages 2 0 R >>");

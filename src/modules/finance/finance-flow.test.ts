@@ -11,6 +11,8 @@ import {
   safeFileName, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, sniffMime, updateTaxMapping, uploadFile, getSupplierInvoice, getCustomerInvoice,
   listSupplierInvoices, getCustomerInvoicePdf, getIssuerProfile, setIssuerProfile,
 } from "./service";
+import { createDunningNotice, getDunningPdf, listOpenItems } from "./receivables";
+import { addDaysIso } from "./dunning";
 import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./export";
 
 const hasDb = !!process.env.DATABASE_URL;
@@ -93,7 +95,7 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
     const orgs = [orgA, orgB];
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.allow_journal_delete', 'on', true)`;
-      for (const m of ["accountingExport", "auditLog", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
+      for (const m of ["accountingExport", "auditLog", "dunningNotice", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.user.deleteMany({ where: { id: { in: userIds } } });
@@ -361,6 +363,80 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
       expect(Buffer.from(after.bytes).equals(Buffer.from(before.bytes))).toBe(true); // alter Beleg bleibt unverändert
       const audit = await db.auditLog.count({ where: { organizationId: orgA, action: "issuer_profile.set" } });
       expect(audit).toBe(2);
+    });
+  });
+
+  describe("Offene Posten und Mahnwesen", () => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const issueOverdue = async (daysAgoDue: number, unit = "100") => {
+      const due = addDaysIso(todayIso, -daysAgoDue);
+      const inv = await createCustomerInvoice(c.fin!, { customerId: ids.customer, invoiceDate: addDaysIso(due, -30), dueDate: due, lines: [{ description: "Beratung", quantity: "1", unitPrice: unit, taxCodeId: ids.ust20 }] });
+      await issueCustomerInvoice(c.fin!, inv.id);
+      return inv.id;
+    };
+
+    it("Alterung, Stufen mit Mindestabstand, Höchststufe, Gutschrift und Bezahlung", async () => {
+      const id = await issueOverdue(40);
+      const row = () => listOpenItems(c.fin!).then((r) => r.rows.find((x) => x.id === id));
+      expect(await row()).toMatchObject({ daysOverdue: 40, bucket: "D31_60", lastLevel: 0, next: { allowed: true, level: 1 } });
+      expect((await listOpenItems(c.fin!)).summary.D31_60.gte(120)).toBe(true); // 100 netto + 20 % USt
+
+      const n1 = await createDunningNotice(c.fin!, { invoiceId: id, feeAmount: "5.50", note: "Bitte um Überweisung" });
+      expect(n1).toMatchObject({ level: 1 });
+      expect(String(n1.openAmount)).toBe("120");
+      await expect(createDunningNotice(c.fin!, { invoiceId: id })).rejects.toThrow(/weniger als 14 Tage/);
+      const n2 = await createDunningNotice(c.fin!, { invoiceId: id }, addDaysIso(todayIso, 15));
+      expect(n2.level).toBe(2);
+      const n3 = await createDunningNotice(c.fin!, { invoiceId: id }, addDaysIso(todayIso, 30));
+      expect(n3.level).toBe(3);
+      await expect(createDunningNotice(c.fin!, { invoiceId: id }, addDaysIso(todayIso, 60))).rejects.toThrow(/höchste Mahnstufe/);
+      expect(await row()).toMatchObject({ lastLevel: 3 });
+
+      // Mahnungen sind unveränderlich
+      await expect(db.dunningNotice.update({ where: { id: n1.id }, data: { feeAmount: "0" } })).rejects.toThrow();
+      expect(await db.auditLog.count({ where: { organizationId: orgA, action: "dunning.create", entityId: { in: [n1.id, n2.id, n3.id] } } })).toBe(3);
+
+      // bezahlt: nicht mehr offen, nicht mehr mahnbar
+      await markCustomerInvoicePaid(c.fin!, { id, paidOn: todayIso });
+      expect(await row()).toBeUndefined();
+      await expect(createDunningNotice(c.fin!, { invoiceId: id }, addDaysIso(todayIso, 90))).rejects.toThrow(/bezahlt/);
+    });
+
+    it("nicht fällige und durch Gutschrift ausgeglichene Rechnungen werden nicht gemahnt", async () => {
+      const future = await createCustomerInvoice(c.fin!, { customerId: ids.customer, invoiceDate: todayIso, dueDate: addDaysIso(todayIso, 10), lines: [{ description: "x", quantity: "1", unitPrice: "10", taxCodeId: ids.ust20 }] });
+      await issueCustomerInvoice(c.fin!, future.id);
+      await expect(createDunningNotice(c.fin!, { invoiceId: future.id })).rejects.toThrow(/noch nicht fällig/);
+
+      const id = await issueOverdue(20, "50");
+      const cn = await createCreditNoteDraft(c.fin!, id);
+      await issueCustomerInvoice(c.fin!, cn.id);
+      expect((await listOpenItems(c.fin!)).rows.find((x) => x.id === id)).toBeUndefined();
+      await expect(createDunningNotice(c.fin!, { invoiceId: id })).rejects.toThrow(/Gutschriften ausgeglichen/);
+    });
+
+    it("parallele Mahnläufe erzeugen genau eine Stufe; Berechtigung und Mandantentrennung", async () => {
+      const id = await issueOverdue(30);
+      const r = await Promise.allSettled([createDunningNotice(c.fin!, { invoiceId: id }), createDunningNotice(c.fin2!, { invoiceId: id })]);
+      expect(r.filter((x) => x.status === "fulfilled")).toHaveLength(1);
+      expect(await db.dunningNotice.count({ where: { invoiceId: id } })).toBe(1);
+      await expect(createDunningNotice(c.emp!, { invoiceId: id }, addDaysIso(todayIso, 20))).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(createDunningNotice(c.finB!, { invoiceId: id }, addDaysIso(todayIso, 20))).rejects.toBeInstanceOf(NotFoundError);
+      const notice = await db.dunningNotice.findFirstOrThrow({ where: { invoiceId: id } });
+      await expect(getDunningPdf(c.finB!, notice.id)).rejects.toBeInstanceOf(NotFoundError);
+      await expect(getDunningPdf(c.emp!, notice.id)).rejects.toBeInstanceOf(ForbiddenError);
+    });
+
+    it("Mahnung als PDF mit Rechnungsnummer, Betrag, Gebühr und Frist", async () => {
+      const id = await issueOverdue(25);
+      const n = await createDunningNotice(c.fin!, { invoiceId: id, feeAmount: "7.5" });
+      const f = await getDunningPdf(c.fin!, n.id);
+      const s = Buffer.from(f.bytes).toString("latin1");
+      const inv = await getCustomerInvoice(c.fin!, id);
+      expect(s.startsWith("%PDF-")).toBe(true);
+      expect(f.filename).toBe(`Mahnung-1-${inv.number}.pdf`);
+      expect(s).toContain("(Zahlungserinnerung)");
+      expect(s).toContain(`zu Rechnung ${inv.number})`);
+      expect(s).toContain("(127,50)"); // 120,00 offen + 7,50 Gebühr
     });
   });
 });

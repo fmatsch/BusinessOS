@@ -63,6 +63,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Aussteller**
 `IssuerProfile` (je Organisation: Firmenname, Anschrift, UID, Firmenbuch, IBAN/BIC, Kontakt). `CustomerInvoice.issuerSnapshot` (JSON) hält den Stand beim Ausstellen fest.
 
+**Mahnwesen**
+`DunningNotice` (Rechnung, Stufe 1–3, offener Betrag, Gebühr, Zahlungsfrist) – append-only per Trigger, je Rechnung und Stufe eindeutig. `AccountingProfile` um die Abgleich-Toleranz erweitert.
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

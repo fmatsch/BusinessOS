@@ -192,6 +192,16 @@ test.describe.serial("Finanzen und Export an die Steuerberatung (Browser)", () =
     await logout(page);
   });
 
+  test("Offene Posten: ausgestellte Rechnung erscheint, noch nicht mahnbar", async ({ page }) => {
+    await login(page, "admin");
+    await page.goto("/finance/receivables");
+    await expect(page.getByRole("heading", { name: "Offene Posten und Mahnwesen" })).toBeVisible();
+    const row = page.getByRole("row").filter({ hasText: customerName });
+    await expect(row.first()).toBeVisible();
+    await expect(row.first()).toContainText("Die Rechnung ist noch nicht fällig");
+    await logout(page);
+  });
+
   test("Export im BMD-Format: Vorschau, Lauf, Buchungsdatei und Belegpaket", async ({ page }) => {
     await login(page, "admin");
     await setProfile(page, "BMD");

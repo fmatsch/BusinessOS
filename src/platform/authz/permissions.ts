@@ -56,6 +56,7 @@ export const PERMISSIONS = [
   "finance.invoice.out.issue",
   "finance.export.read",
   "finance.export.create",
+  "finance.dunning.create",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -94,6 +95,7 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "procurement.receipt.create",
       "procurement.receipt.read",
       "finance.invoice.in.accept_variance",
+      "finance.dunning.create",
     ],
   },
   hr: {

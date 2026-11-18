@@ -1038,6 +1038,27 @@ model CustomerInvoiceLine {
   costCenterId     String?
 }
 
+/// Mahnung zu einer Ausgangsrechnung. Unveränderlich (Trigger): jede Stufe ist ein eigener Eintrag.
+model DunningNotice {
+  id             String   @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  /// 1 Zahlungserinnerung · 2 erste Mahnung · 3 letzte Mahnung
+  level          Int
+  issuedOn       DateTime @db.Date
+  /// offener Betrag (brutto) zum Zeitpunkt der Mahnung
+  openAmount     Decimal  @db.Decimal(19, 4)
+  /// manuell eingetragene Gebühr (keine Zinsberechnung)
+  feeAmount      Decimal  @default(0) @db.Decimal(19, 4)
+  payByDate      DateTime @db.Date
+  note           String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, invoiceId, level])
+  @@index([organizationId, invoiceId])
+}
+
 model AccountingProfile {
   organizationId       String  @id
   /// DATEV | BMD

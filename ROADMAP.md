@@ -122,6 +122,9 @@ Entscheidung: kein eigenes Hauptbuch; die Steuerberatung bucht. Detailplan: [FIN
 * ⚠️ **Beide Formate wurden nicht gegen echte BMD-/DATEV-Systeme getestet**, sondern nach den veröffentlichten Beschreibungen gebaut – vor Produktivbetrieb mit der Steuerberatung prüfen (u. a. Annahme zu Buchcode/Buchsymbol)
 * ✅ PDF für ausgestellte Ausgangsrechnungen und Gutschriften (`finance/invoice-pdf.ts`, ohne Zusatzbibliothek, reproduzierbar; Abruf `/finance/out/<id>/pdf`)
 * ✅ Aussteller-Stammdaten (`IssuerProfile`: Anschrift, UID, Firmenbuch, IBAN/BIC, Kontakt; IBAN-Prüfsumme) im Briefkopf und in der Fußzeile des PDFs; der Stand wird beim Ausstellen am Beleg festgehalten (`issuerSnapshot`), alte PDFs bleiben unverändert
+* ✅ Offene Posten und Mahnwesen: Alterung, drei Mahnstufen (Zahlungserinnerung, 1. und letzte Mahnung) mit Mindestabstand 14 Tage, Mahnung als PDF, manuelle Gebühr, unveränderlich (`finance/dunning.ts`, `receivables.ts`)
+* ⚠️ Mahnwesen ohne Verzugszinsen, ohne Versand (PDF wird heruntergeladen), Fristen fest (7 Tage Zahlungsfrist)
+* ✅ Abgleich-Toleranz je Organisation einstellbar; Rollen-Sync für neue Berechtigungen (`npm run db:sync-roles`)
 * ⚠️ Kein Logo, keine Zahlungs-QR; vor Einführung der Stammdaten ausgestellte Rechnungen zeigen nur den Organisationsnamen · keine Fremdwährung · keine Bankanbindung · keine Verknüpfung Rechnung ↔ Budget
 
 ## M13 Wareneingang und Rechnungsabgleich
