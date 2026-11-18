@@ -35,6 +35,8 @@ model Organization {
   purchaseRequests PurchaseRequest[]
   purchaseOrders  PurchaseOrder[]
   budgets         Budget[]
+  approvals       Approval[]
+  sequences       Sequence[]
   auditLogs       AuditLog[]
   outbox          OutboxEvent[]
   notifications   Notification[]
@@ -219,8 +221,10 @@ model PurchaseRequest {
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
 
+  submittedAt    DateTime?
   lines          PurchaseRequestLine[]
   orders         PurchaseOrder[]
+  approvals      Approval[]
 
   @@unique([organizationId, number])
   @@index([organizationId, status])
@@ -267,4 +271,37 @@ model Budget {
 
   @@unique([costCenterId, fiscalYear])
   @@index([organizationId])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Approval {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestId      String
+  request        PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  stepKey        String // MANAGER | FINANCE
+  sequence       Int
+  status         ApprovalStatus  @default(PENDING)
+  decidedById    String?
+  decidedAt      DateTime?
+  comment        String?
+
+  @@unique([requestId, sequence])
+  @@index([organizationId, status])
+}
+
+/// Atomare Nummernkreise pro Organisation (z. B. PR-2026, PO-2026)
+model Sequence {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String
+  value          Int          @default(0)
+
+  @@id([organizationId, key])
 }

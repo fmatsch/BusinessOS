@@ -8,15 +8,18 @@ const NAV = [
   { href: "/", key: "nav.dashboard", live: true },
   { href: "/departments", key: "nav.departments", live: true },
   { href: "/cost-centers", key: "nav.costcenters", live: true },
+  { href: "/budgets", key: "nav.budgets", live: true },
   { href: "/planned/finance", key: "nav.finance" },
   { href: "/planned/hr", key: "nav.hr" },
-  { href: "/planned/procurement", key: "nav.procurement" },
+  { href: "/procurement", key: "nav.procurement", live: true },
+  { href: "/suppliers", key: "nav.suppliers", live: true },
   { href: "/planned/inventory", key: "nav.inventory" },
   { href: "/planned/projects", key: "nav.projects" },
   { href: "/planned/crm", key: "nav.crm" },
   { href: "/planned/workflows", key: "nav.workflows" },
   { href: "/planned/analytics", key: "nav.analytics" },
   { href: "/planned/copilot", key: "nav.copilot" },
+  { href: "/audit", key: "nav.audit", live: true },
 ] as const;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

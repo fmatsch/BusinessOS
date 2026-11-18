@@ -3,8 +3,8 @@
 Modulare, KI-native ERP-Plattform (Modular Monolith) mit Mandantenfähigkeit, RBAC, Audit-Log und Workflow-Engine.
 Sprache der Oberfläche: Deutsch (Standard) und Englisch.
 
-> **Status: Phase 2 (Foundation).** Funktional sind bisher nur Authentifizierung, Organisationen/Mandanten, Rollen & Rechte,
-> der App-Rahmen sowie Abteilungen und Kostenstellen. Alle anderen Module erscheinen in der Navigation als *geplant* und täuschen keine Funktion vor.
+> **Status: Phase 3 (Beschaffung & Budget).** Funktional sind Authentifizierung, Organisationen/Mandanten, Rollen & Rechte,
+> App-Rahmen, Abteilungen, Kostenstellen, Lieferanten, Bestellanforderung mit Freigabe, Bestellung, Budget-Bindung und Audit-Log. Alle anderen Module erscheinen in der Navigation als *geplant* und täuschen keine Funktion vor.
 > Siehe [ROADMAP.md](ROADMAP.md).
 
 ## Dokumentation
@@ -31,6 +31,7 @@ docker compose up -d db       # PostgreSQL
 npm install
 npx prisma migrate dev        # Schema anlegen
 npm run db:seed               # Demo-Daten (rein synthetisch)
+# Ohne Docker: npm run db:dev startet eine lokale PostgreSQL (Port 54329), nur für Entwicklung
 npm run dev                   # http://localhost:3000
 ```
 

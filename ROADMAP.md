@@ -6,20 +6,24 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ✅ README, ARCHITECTURE, DATABASE, ROADMAP, SECURITY, CLAUDE
 
 ## Phase 2 – Foundation
-* ✅ Projektstruktur, Docker Compose (PostgreSQL), Prisma-Schema + Init-Migration
-* ✅ Authentifizierung (Auth.js Credentials, bcrypt, Rate Limit)
+* ✅ Projektstruktur, Docker Compose (PostgreSQL), Prisma-Schema + Migrationen
+* ✅ Authentifizierung (Auth.js Credentials, bcrypt, Rate Limit) – Login im Browser verifiziert
 * ✅ Organisationen, Mitgliedschaften, Organization-Switcher (Mitgliedschaft serverseitig geprüft)
 * ✅ RBAC mit Systemrollen, `authorize()` in jedem Service
-* ✅ Audit-Log-Grundlage (Schreiben in der Transaktion, Anzeige im Dashboard)
+* ✅ Audit-Log (in der Transaktion geschrieben, Ansicht `/audit`)
 * ✅ App-Rahmen (Sidebar, Topbar, DE/EN), geplante Module klar gekennzeichnet
 * ✅ Abteilungen und Kostenstellen (Anlegen/Listen)
-* ⚠️ Nicht gegen eine echte Datenbank verifiziert (Docker fehlt auf dem Entwicklungsrechner): Migration, Seed, Login-Ablauf, Tenant-Isolationstest (läuft in CI)
 * ⬜ Dark-Mode-Umschalter, Command Palette, Bearbeiten/Deaktivieren von Stammdaten
 
 ## Phase 3 – Funktionaler MVP (Beschaffung & Budget)
-* ⬜ Lieferanten
-* ⬜ Bestellanforderung → Genehmigung (Schwelle 5.000 € ⇒ Finance) → Bestellung → Kostenstelle → Budget (committed)
-* ⬜ Dashboard mit echten Kennzahlen, Audit-Log-Ansicht
+* ✅ Lieferanten
+* ✅ Bestellanforderung → Freigabe (Führungskraft; über 5.000 € zusätzlich Finanzen) → Bestellung → Kostenstelle → gebundenes Budget → Dashboard
+* ✅ Budgets je Kostenstelle und Jahr; gebunden = Summe der Bestellungen (abgeleitet); Überschreitung wird angezeigt und im Audit-Log vermerkt
+* ✅ Keine Selbstfreigabe, keine Doppelbestellung, parallele Entscheidungen sicher (Test)
+* ⚠️ Freigabeschwelle ist eine Konstante (`rules.ts`), noch keine versionierte Workflow-Definition
+* ⚠️ Outbox-Events werden geschrieben, aber noch nicht von einem Dispatcher verarbeitet; keine Benachrichtigungen
+* ⚠️ Über-Budget-Bestellungen werden zugelassen (nur Warnung), kein Sperr-Workflow
+* ⚠️ Neue Seiten haben deutsche Texte direkt im Code, nicht über i18n
 
 ## Phase 4 – KI
 * ⬜ Provider-Abstraktion, Claude-Anbindung

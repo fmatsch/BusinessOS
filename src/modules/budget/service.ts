@@ -1,0 +1,58 @@
+import { db } from "@/lib/db";
+import { Decimal } from "@/lib/money";
+import { authorize, type Ctx } from "@/platform/authz/authorize";
+import { writeAudit } from "@/platform/audit/audit";
+import { NotFoundError } from "@/platform/errors";
+import { budgetInput } from "./schema";
+import { committedOf, fiscalYearRange } from "./queries";
+
+export interface BudgetRow {
+  costCenterId: string;
+  code: string;
+  name: string;
+  budget: Decimal | null;
+  committed: Decimal;
+  remaining: Decimal | null;
+}
+
+export async function budgetOverview(ctx: Ctx, year: number): Promise<BudgetRow[]> {
+  authorize(ctx, "finance.budget.read");
+  const range = fiscalYearRange(year);
+  const centers = await db.costCenter.findMany({
+    where: { organizationId: ctx.organizationId, active: true },
+    orderBy: { code: "asc" },
+    include: { budgets: { where: { fiscalYear: year } } },
+  });
+  return Promise.all(
+    centers.map(async (c) => {
+      const committed = await committedOf(db, ctx.organizationId, c.id, range);
+      const budget = c.budgets[0] ? new Decimal(c.budgets[0].amount.toString()) : null;
+      return {
+        costCenterId: c.id, code: c.code, name: c.name, budget, committed,
+        remaining: budget ? budget.minus(committed) : null,
+      };
+    }),
+  );
+}
+
+export async function setBudget(ctx: Ctx, raw: unknown) {
+  authorize(ctx, "finance.budget.write");
+  const input = budgetInput.parse(raw);
+  return db.$transaction(async (tx) => {
+    const cc = await tx.costCenter.findFirst({ where: { id: input.costCenterId, organizationId: ctx.organizationId } });
+    if (!cc) throw new NotFoundError("Kostenstelle");
+    const org = await tx.organization.findUniqueOrThrow({ where: { id: ctx.organizationId }, select: { currency: true } });
+    const before = await tx.budget.findUnique({ where: { costCenterId_fiscalYear: { costCenterId: cc.id, fiscalYear: input.fiscalYear } } });
+    const saved = await tx.budget.upsert({
+      where: { costCenterId_fiscalYear: { costCenterId: cc.id, fiscalYear: input.fiscalYear } },
+      create: { organizationId: ctx.organizationId, costCenterId: cc.id, fiscalYear: input.fiscalYear, amount: input.amount, currency: org.currency },
+      update: { amount: input.amount },
+    });
+    await writeAudit(tx, ctx, {
+      action: "budget.set", entityType: "Budget", entityId: saved.id,
+      before: before ? { amount: before.amount.toString() } : undefined,
+      after: { costCenterId: cc.id, fiscalYear: input.fiscalYear, amount: saved.amount.toString() },
+    });
+    return saved;
+  });
+}

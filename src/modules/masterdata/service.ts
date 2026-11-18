@@ -1,14 +1,10 @@
 import { db } from "@/lib/db";
 import { authorize, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
+import { NotFoundError } from "@/platform/errors";
 import { costCenterInput, departmentInput } from "./schema";
 
-export class NotFoundError extends Error {
-  constructor(what: string) {
-    super(`${what} nicht gefunden`);
-    this.name = "NotFoundError";
-  }
-}
+export { NotFoundError };
 
 export async function listDepartments(ctx: Ctx) {
   authorize(ctx, "master.department.read");
