@@ -37,6 +37,7 @@
 * Spesen: Belege werden wie Finanzbelege am Inhalt geprüft und mit Prüfsumme gespeichert; Zugriff nur für die Person, die direkte Führungskraft und `expense.read_all`; fremde Abrechnungen sind für Unbeteiligte nicht erkennbar (404).
 * KI-Schreibvorschläge: nur `propose_*`-Werkzeuge; Ausführung ausschließlich durch die bestätigende Person über den Service mit ihren Rechten (nie Modell, nie Service-Konto); Beschreibung aus geprüften Daten; Frist 15 Minuten, einmalig (Beanspruchung per Statuswechsel), Audit (`ai.proposal` als KI, `ai.proposal_confirmed` als Person). Freigaben, Löschungen, Zahlungen sind nicht als Werkzeug vorhanden.
 * Analysen: feste Berichte hinter doppeltem Rechtecheck, kein freies SQL; CSV-Export mit Formelschutz und Audit-Eintrag; Workflows senden nur Benachrichtigungen (keine Datenänderung, keine externen Aufrufe), Texte werden nie als HTML ausgegeben.
+* Installer: strenge Eingabeprüfung vor jeder Verwendung in Skripten, statisches Server-Skript, Host-Schlüssel-Bestätigung, sudo-Passwort über stdin, Geheimnisse zufällig und nur in `/etc/businessos/env` (0640 root:businessos), Dienste gehärtet und nur lokal gebunden (nginx als einziger öffentlicher Eintritt), tägliche Sicherung.
 
 ## Bekannte Lücken (offen)
 * Postgres Row-Level-Security noch nicht aktiv.

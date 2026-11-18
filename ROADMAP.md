@@ -184,6 +184,13 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ CSV-Export (UTF-8 mit BOM, Semikolon, Dezimalkomma; Textzellen gegen Formelinjektion geschützt; jeder Export im Audit-Log)
 * ⚠️ Feste Berichte, keine frei zusammenstellbaren Abfragen, keine Dashboards je Benutzer, keine Zeitreihen über mehrere Jahre; Personaldaten sind bewusst nicht enthalten
 
+## Installer
+* ✅ `installer/` (Node.js ab 20.9, `install.cmd` / `install.sh` / `node installer/install.mjs`): wählt **Dieses System** oder **Ubuntu-Server**, fragt Zugangsdaten und Optionen ab (oder nimmt sie als Parameter), prüft jede Eingabe streng
+* ✅ **Dieses System:** Datenbank (Docker, eingebettetes PostgreSQL ohne Docker oder vorhandene), `.env` mit Zufallsschlüsseln, `npm ci`, Migrationen, Build, Rollen, erster Benutzer (`scripts/create-admin.ts`), Startskripte (`scripts/run-local.mjs`: Datenbank, Worker, Web), optional Autostart (Windows/Linux)
+* ✅ **Ubuntu-Server per SSH:** Host-Schlüssel-Fingerabdruck wird bestätigt, sudo-Passwort nur über stdin; auf dem Server: PostgreSQL, nginx, Node.js 22 (NodeSource-Schlüssel), Systembenutzer, systemd-Dienste (Web + Worker, gehärtet), Zertifikat (Let's Encrypt, mit Domain), optional ufw, tägliche Datenbanksicherung, Funktionsprüfung, Aktualisierung mit Releases und Rückschritt
+* ✅ Geprüft: Eingabeprüfung, Dateierzeugung, Skriptsyntax (bash -n), Archivinhalt, SSH-Client gegen Test-Server; lokale Variante vollständig durchlaufen (Archiv → Installation → Start → Anmeldung)
+* ⚠️ Der Ubuntu-Ablauf wurde **nicht gegen einen echten Ubuntu-Server durchlaufen**; nur Ubuntu 22.04+; Build läuft auf dem Server; Sicherungen liegen auf dem Server selbst; keine Hochverfügbarkeit
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 

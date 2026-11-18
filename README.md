@@ -23,6 +23,14 @@ Sprache der Oberfläche: Deutsch (Standard) und Englisch.
 
 Next.js (App Router) · React · TypeScript (strict) · Tailwind CSS · Prisma · PostgreSQL · Zod · Auth.js · Docker Compose
 
+## Installation (Installer)
+
+Der Installer richtet BusinessOS **auf diesem System** oder **auf einem Ubuntu-Server** (per SSH) ein – inklusive Datenbank, Dienste, Webserver, Sicherung und erstem Benutzer. Siehe [installer/README.md](installer/README.md).
+
+```powershell
+node installer/install.mjs        # oder installer\install.cmd (Windows) / ./installer/install.sh
+```
+
 ## Lokal starten
 
 Voraussetzungen: Node.js 20+ und Docker.

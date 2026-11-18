@@ -1,0 +1,11 @@
+{
+  "name": "businessos-installer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Installer für BusinessOS: lokal oder auf einen Ubuntu-Server per SSH",
+  "engines": { "node": ">=20.9" },
+  "dependencies": {
+    "ssh2": "^1.16.0"
+  }
+}
