@@ -84,6 +84,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Lager**
 `Item` und `StockMovement` (Menge mit Vorzeichen; Art RECEIPT/ISSUE/ADJUST/REVERSAL; `goodsReceiptLineId` und `reversesId` eindeutig; per Trigger append-only).
 
+**Copilot**
+`CopilotProposal` (Person, Werkzeug, geprüfte Eingabe, vom Server gebildete Beschreibung, Status PENDING/EXECUTED/FAILED/REJECTED/EXPIRED).
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

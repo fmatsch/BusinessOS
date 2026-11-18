@@ -11,9 +11,11 @@ export default async function CopilotPage() {
     <div className="max-w-3xl space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">KI-Copilot</h1>
       <p className="text-sm text-muted">
-        Beantwortet Fragen zu den Daten Ihrer aktiven Organisation – nur lesend und nur mit Ihren Berechtigungen.
-        Der Copilot kann nichts anlegen, ändern oder freigeben. Jede Frage und jeder Datenzugriff wird im Audit-Log protokolliert.
-        Verfügbar sind Beschaffung, Budgets, Lieferanten, Kostenstellen und Abteilungen; Rechnungen, Personal, Lager und CRM sind noch nicht umgesetzt.
+        Beantwortet Fragen zu den Daten Ihrer aktiven Organisation – nur mit Ihren Berechtigungen. Änderungen kann der Copilot nur
+        <strong> vorschlagen</strong> (Bestellanforderung einreichen, Projektstunden buchen, Kundenaktivität eintragen): Sie sehen den Vorschlag
+        und führen ihn mit „Ausführen“ selbst aus; ohne Bestätigung passiert nichts. Freigeben, Entscheiden, Löschen und Zahlungen sind nicht möglich.
+        Jede Frage, jeder Datenzugriff und jeder Vorschlag wird im Audit-Log protokolliert.
+        Verfügbar sind Beschaffung, Budgets, Lieferanten, Kostenstellen, Abteilungen, Projekte und Kunden (CRM); Rechnungen, Personal und Lager sind für den Copilot noch nicht angebunden.
         Jede Frage wird einzeln beantwortet (kein Gesprächsverlauf).
       </p>
       {!configured && (

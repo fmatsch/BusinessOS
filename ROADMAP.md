@@ -34,7 +34,9 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ✅ Rate-Limit 20 Fragen/Stunde/Benutzer, max. 6 Werkzeugschritte pro Frage
 * ⚠️ **Nicht gegen die echte Claude-API verifiziert** (kein API-Schlüssel hinterlegt): getestet mit Fake-Anbieter und Attrappe des SDK-Clients
 * ⚠️ Kein Gesprächsverlauf (jede Frage einzeln); keine Streaming-Ausgabe; keine Fragen zu Rechnungen/Personal/Lager/CRM (Module fehlen)
-* ⬜ Schreibende Werkzeuge nur als Vorschlag mit Bestätigung durch den Benutzer
+* ✅ Schreibende Werkzeuge nur als **Vorschlag mit Bestätigung**: Bestellanforderung einreichen, eigene Projektstunden buchen, Kundenaktivität eintragen (je mit Berechtigung der Person). Das Modell ändert nie etwas: `propose_*` prüft und speichert einen Vorschlag (höchstens 3 je Frage), die Beschreibung bildet der Server aus den geprüften Daten, die Person führt mit „Ausführen“ selbst aus – über denselben Service, mit ihren Berechtigungen, genau einmal, innerhalb von 15 Minuten; Verwerfen möglich. Freigeben, Entscheiden, Löschen und Zahlungen sind für den Copilot ausgeschlossen
+* ⚠️ Die Bestätigungsoberfläche (Vorschlagskarte) ist nur per Typprüfung und Seitentest, nicht per Browser-Durchlauf mit echtem Modell geprüft (kein API-Schlüssel); die Logik ist mit Fake-Anbieter und echter Datenbank getestet
+* ⚠️ Copilot kennt weiterhin keine Rechnungen, Personal, Lager, Spesen, Bank und Angebote (nur Beschaffung, Budgets, Stammdaten, Projekte, Kunden)
 
 ## Phase 5 – Tests & Härtung
 * ✅ Unit-Tests (Regeln, Validierung, Rate-Limit, Autorisierung, KI-Schleife)

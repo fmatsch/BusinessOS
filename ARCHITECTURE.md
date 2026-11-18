@@ -67,7 +67,7 @@ prisma/                schema.prisma, Migrationen, seed.ts
 ## KI-Copilot (Phase 4)
 * `AiProvider`-Interface; erste Implementierung Anthropic Claude.
 * Tools sind typisierte Funktionen mit Zod-Schema, jede ruft denselben Service-Layer mit dem Kontext des Benutzers (kein Service-Konto).
-* Nur lesende Tools im MVP; schreibende Tools erzeugen einen **Vorschlag**, der erst nach Bestätigung durch den Benutzer ausgeführt wird.
+* Lesende Tools führen sofort aus; schreibende Tools (`AiWriteTool`) erzeugen einen **Vorschlag** (`CopilotProposal`), der erst nach Bestätigung durch den Benutzer ausgeführt wird (Service mit dessen Kontext, einmalig, 15 Minuten gültig).
 * Antworten nennen Quelldatensätze; Schätzungen werden gekennzeichnet.
 * Dokumentinhalte gelten als nicht vertrauenswürdig (Prompt Injection): sie werden als Daten markiert, Tool-Aufrufe werden nie aus Daten abgeleitet.
 * Jeder Tool-Aufruf → AuditLog (`actor = AI on behalf of user`).

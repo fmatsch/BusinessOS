@@ -3,6 +3,8 @@ import type { AiTool } from "@/platform/ai/agent";
 import { budgetOverview, committedByDepartment } from "@/modules/budget/service";
 import { listCostCenters, listDepartments } from "@/modules/masterdata/service";
 import { getRequest, listPendingApprovals, listRequests, listSuppliers } from "@/modules/procurement/service";
+import { listProjects } from "@/modules/projects/service";
+import { listCrmCustomers } from "@/modules/crm/service";
 
 const year = z.number().int().min(2000).max(2100).optional().describe("Geschäftsjahr, Standard: aktuelles Jahr");
 const currentYear = () => new Date().getFullYear();
@@ -132,6 +134,32 @@ export const copilotTools: AiTool<any>[] = [
       return {
         data: rows.map((d) => ({ code: d.code, name: d.name, parent: d.parent?.name ?? null, costCenters: d._count.costCenters })),
         sources: [{ type: "Department", id: "all", label: "Abteilungen", href: "/departments" }],
+      };
+    },
+  },
+  {
+    name: "list_projects",
+    description: "Projekte (Nummer, Name, Status, gebuchte Stunden, Budgetverbrauch). Die Projektnummer wird für Vorschläge zum Zeitbuchen gebraucht.",
+    permission: "project.read",
+    input: z.object({}),
+    async run(ctx) {
+      const rows = await listProjects(ctx);
+      return {
+        data: rows.slice(0, 50).map((p) => ({ number: p.number, name: p.name, status: p.status, bookedMinutes: p.bookedMinutes, budgetUsedPercent: p.budgetUsed })),
+        sources: [{ type: "Project", id: "all", label: "Projekte", href: "/projects" }],
+      };
+    },
+  },
+  {
+    name: "list_crm_customers",
+    description: "Kunden (Nummer, Name, Ort, letzte Aktivität, offene Angebote). Die Kundennummer wird für Vorschläge zu Aktivitäten gebraucht.",
+    permission: "crm.read",
+    input: z.object({}),
+    async run(ctx) {
+      const rows = await listCrmCustomers(ctx);
+      return {
+        data: rows.slice(0, 100).map((c) => ({ number: c.number, name: c.name, city: c.city, lastActivity: iso(c.lastActivity), openQuotes: c.openQuotes })),
+        sources: [{ type: "Customer", id: "all", label: "Kunden (CRM)", href: "/crm" }],
       };
     },
   },

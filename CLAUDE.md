@@ -18,7 +18,7 @@ Modularer Monolith: Next.js (App Router) + TypeScript strict + Prisma/PostgreSQL
 6a. **Schreibende Operationen** laufen in `prisma.$transaction` und schreiben AuditLog + ggf. OutboxEvent atomar.
 7. **Gebuchte Finanzdaten** nie ändern/löschen – Storno-Buchung.
 8. **Validierung** mit Zod an jeder Eingabegrenze.
-9. **KI** nur über Tools, die Services mit Benutzerkontext aufrufen; nie freies SQL; Änderungen nur nach Bestätigung.
+9. **KI** nur über Tools, die Services mit Benutzerkontext aufrufen; nie freies SQL; Änderungen nur als Vorschlag (`AiWriteTool`, `propose_*`) und erst nach Bestätigung der Person ausführen; nie Freigaben, Löschungen oder Zahlungen als KI-Werkzeug.
 10. **Keine Secrets im Code**; neue Variablen in `.env.example` dokumentieren.
 10a. **HR**: sensible Felder nur über `readSensitive` (protokolliert); Salden nur als Journal (nie Zahlen überschreiben); Abwesenheitsdaten ohne Diagnosen; Zeilensperre `lockEmployee` bei Buchungen je Mitarbeiter.
 10b. **Dienstplan**: Regeln nur über `modules/roster/rules.ts` (rein, getestet); Zeiten als UTC speichern, Dauern aus UTC berechnen; veröffentlichte Versionen nie ändern (neue Version erzeugen); Mitarbeiter sehen nur `PublishedShift`, nie die Arbeitskopie.

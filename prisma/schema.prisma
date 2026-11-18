@@ -1003,6 +1003,27 @@ model SupplierInvoiceLine {
   costCenterId     String?
 }
 
+// ───────── KI-Copilot: Vorschläge mit Bestätigung ─────────
+
+/// Änderung, die der Copilot vorschlägt. Ausgeführt wird sie nur, wenn dieselbe Person sie bestätigt – mit deren Berechtigungen.
+model CopilotProposal {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  tool           String
+  /// geprüfte Eingabe des Werkzeugs
+  input          Json
+  /// vom Server aus der geprüften Eingabe gebildete Beschreibung (nicht vom Modell)
+  summary        String
+  /// PENDING | EXECUTED | FAILED | REJECTED | EXPIRED
+  status         String    @default("PENDING")
+  resultMessage  String?
+  createdAt      DateTime  @default(now())
+  decidedAt      DateTime?
+
+  @@index([organizationId, userId, status])
+}
+
 // ───────── Lager: Artikel und Bestandsbewegungen ─────────
 
 /// Artikel. Ein Lager je Organisation (keine Lagerorte).
