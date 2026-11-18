@@ -5,6 +5,7 @@ import { ForbiddenError, type Ctx } from "@/platform/authz/authorize";
 import { PERMISSIONS, SYSTEM_ROLES, type Permission } from "@/platform/authz/permissions";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { createCostCenter } from "@/modules/masterdata/service";
+import { budgetOverview } from "@/modules/budget/service";
 import { acceptInvoiceVariance, approveSupplierInvoice, createAccount, createSupplierInvoice, createTaxCode, getInvoiceMatch, listAccounts, setSupplierAccounts } from "@/modules/finance/service";
 import { createOrder, createRequest, createSupplier, decideRequest, getOrderReceiving, recordReceipt, reverseReceipt } from "./service";
 
@@ -130,6 +131,20 @@ describe.skipIf(!hasDb)("Wareneingang und Rechnungsabgleich", () => {
     expect((await getInvoiceMatch(c.fin!, free.id)).applicable).toBe(false);
     await expect(acceptInvoiceVariance(c.fin2!, free.id, "ohne Grund nötig")).rejects.toThrow(/keine Abweichung/);
     await approveSupplierInvoice(c.fin2!, free.id);
+  });
+
+  it("Budget: Ist = freigegebene Rechnungen (Kostenstelle der Bestellung), Gutschriften abgezogen, Entwürfe zählen nicht", async () => {
+    const year = new Date().getFullYear();
+    const row = async () => (await budgetOverview(c.fin!, year)).find((r) => r.costCenterId === ccId)!;
+    expect((await row()).actual.toString()).toBe("2000"); // RC-2 und RC-3 (je 1.000, Bestellung RC1); RC-4 ohne Bestellung zählt nicht zur Kostenstelle
+    expect((await row()).committed.toString()).toBe("2000");
+    await invoice("RC-5", "700"); // Entwurf zählt nicht
+    expect((await row()).actual.toString()).toBe("2000");
+    const orig = await db.supplierInvoice.findFirstOrThrow({ where: { organizationId: orgA, invoiceNumber: "RC-2" } });
+    const credit = await invoice("RC-2-G", "100", { kind: "CREDIT", creditsId: orig.id, purchaseOrderId: null });
+    await approveSupplierInvoice(c.fin2!, credit.id);
+    expect((await row()).actual.toString()).toBe("1900");
+    await expect(budgetOverview(c.emp!, year)).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it("Korrektur nur als Gegenbuchung, höchstens einmal; Journal ist per Trigger geschützt", async () => {

@@ -1,6 +1,6 @@
 # Wareneingang und Rechnungsabgleich (M13)
 
-Status: **umgesetzt** (Schritte 1–4 des ursprünglichen Plans); Schritt 5 (Budget „Ist“ aus Rechnungen) ist offen.
+Status: **umgesetzt** (Schritte 1–4 des ursprünglichen Plans); Schritt 5 (Budget „Ist“ aus Rechnungen, `finance/queries.ts` → `budgetOverview`) ist ebenfalls umgesetzt.
 
 ## Was es tut
 * **Wareneingang** je Bestellung und Bestellposition (Teillieferungen möglich); Lieferstatus „nichts geliefert / teilgeliefert / vollständig“.

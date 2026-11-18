@@ -128,7 +128,8 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ Wareneingang je Bestellposition (Teillieferungen, Korrektur per Gegenbuchung, append-only)
 * ✅ Drei-Wege-Abgleich bei der Rechnungsfreigabe (Toleranz 2 % / 5 €), Sperre und Akzeptieren mit Begründung (eigene Berechtigung, Vier-Augen)
 * ⚠️ Toleranz fest; Abgleich nur für Rechnungen mit Bestellbezug; Wertvergleich statt Mengenvergleich je Rechnungsposition
-* ⬜ Budget „Ist“ aus freigegebenen Rechnungen
+* ✅ Budget „Ist“: Netto der freigegebenen Eingangsrechnungen je Kostenstelle und Jahr (Rechnungsdatum), Gutschriften abgezogen; Kostenstelle der Position, sonst der Bestellung (Gutschriften erben sie von der Rechnung). Anzeige neben „Gebunden“; „Verfügbar“ rechnet weiter mit dem gebundenen Betrag
+* ⚠️ Rechnungen ganz ohne Kostenstelle erscheinen in keiner Zeile; Geschäftsjahr = Kalenderjahr; Netto (keine Vorsteuer)
 
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.

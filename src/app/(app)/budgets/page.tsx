@@ -28,7 +28,7 @@ export default async function BudgetsPage({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Budgets {year}</h1>
-      <p className="text-sm text-muted">Gebunden = Summe der Bestellungen der Kostenstelle im Jahr (abgeleitet, nicht manuell gepflegt).</p>
+      <p className="text-sm text-muted">Gebunden = Summe der Bestellungen der Kostenstelle im Jahr. Ist = Netto der freigegebenen Eingangsrechnungen (Gutschriften abgezogen; Kostenstelle der Position, sonst der Bestellung). Beide Werte werden abgeleitet, nicht manuell gepflegt. „Verfügbar“ rechnet mit dem gebundenen Betrag.</p>
       <ErrorBanner message={error} />
       {can(ctx, "finance.budget.write") && rows.length > 0 && (
         <form action={save} className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-surface p-4 text-sm">
@@ -44,13 +44,14 @@ export default async function BudgetsPage({ searchParams }: { searchParams: Prom
       )}
       {rows.length === 0 ? <p className="text-sm text-muted">Noch keine Kostenstellen.</p> : (
         <table className="w-full text-left text-sm">
-          <thead className="text-muted"><tr><th className="py-2">Kostenstelle</th><th className="text-right">Budget</th><th className="text-right">Gebunden</th><th className="text-right">Verfügbar</th></tr></thead>
+          <thead className="text-muted"><tr><th className="py-2">Kostenstelle</th><th className="text-right">Budget</th><th className="text-right">Gebunden</th><th className="text-right">Ist (Rechnungen)</th><th className="text-right">Verfügbar</th></tr></thead>
           <tbody className="divide-y divide-line">
             {rows.map((r) => (
               <tr key={r.costCenterId}>
                 <td className="py-2">{r.code} · {r.name}</td>
                 <td className="text-right">{r.budget ? formatMoney(r.budget.toString(), ctx.currency) : "kein Budget"}</td>
                 <td className="text-right">{formatMoney(r.committed.toString(), ctx.currency)}</td>
+                <td className="text-right">{formatMoney(r.actual.toString(), ctx.currency)}</td>
                 <td className={"text-right " + (r.remaining?.isNegative() ? "font-medium text-red-700 dark:text-red-400" : "")}>
                   {r.remaining ? formatMoney(r.remaining.toString(), ctx.currency) : "–"}{r.remaining?.isNegative() ? " (überschritten)" : ""}
                 </td>

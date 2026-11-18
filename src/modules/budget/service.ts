@@ -4,6 +4,7 @@ import { authorize, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
 import { NotFoundError } from "@/platform/errors";
 import { budgetInput } from "./schema";
+import { invoicedNetByCostCenter } from "@/modules/finance/queries";
 import { committedOf, fiscalYearRange } from "./queries";
 
 export interface BudgetRow {
@@ -12,6 +13,8 @@ export interface BudgetRow {
   name: string;
   budget: Decimal | null;
   committed: Decimal;
+  /** Ist: Netto der freigegebenen Eingangsrechnungen im Jahr (Gutschriften abgezogen) */
+  actual: Decimal;
   remaining: Decimal | null;
 }
 
@@ -23,12 +26,13 @@ export async function budgetOverview(ctx: Ctx, year: number): Promise<BudgetRow[
     orderBy: { code: "asc" },
     include: { budgets: { where: { fiscalYear: year } } },
   });
+  const invoiced = await invoicedNetByCostCenter(db, ctx.organizationId, range);
   return Promise.all(
     centers.map(async (c) => {
       const committed = await committedOf(db, ctx.organizationId, c.id, range);
       const budget = c.budgets[0] ? new Decimal(c.budgets[0].amount.toString()) : null;
       return {
-        costCenterId: c.id, code: c.code, name: c.name, budget, committed,
+        costCenterId: c.id, code: c.code, name: c.name, budget, committed, actual: invoiced.get(c.id) ?? new Decimal(0),
         remaining: budget ? budget.minus(committed) : null,
       };
     }),
