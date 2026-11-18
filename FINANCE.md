@@ -1,8 +1,43 @@
 # Planung Finance (M12): Buchhaltung, Eingangs- und Ausgangsrechnungen, Zahlungen
 
-Status: **Plan, nichts davon ist umgesetzt.** Es gibt bisher weder Konten noch Buchungen, Rechnungen oder Zahlungen im Schema (die frühere Angabe „vorbereitet" in `DATABASE.md` war ungenau und ist korrigiert). Vorhanden sind nur Kostenstellen, Lieferanten, Bestellungen und Budgets.
+Status: **Plan (Variante B gewählt, siehe Abschnitt 0), nichts davon ist umgesetzt.** Es gibt bisher weder Konten noch Buchungen, Rechnungen oder Zahlungen im Schema (die frühere Angabe „vorbereitet" in `DATABASE.md` war ungenau und ist korrigiert). Vorhanden sind nur Kostenstellen, Lieferanten, Bestellungen und Budgets.
 
 Rechtliche und steuerliche Aussagen sind **Arbeitsannahmen für Österreich** und müssen vor der Umsetzung mit einer Steuerberatung geprüft werden. Keine Rechts- oder Steuerberatung.
+
+## 0. Entscheidung (2026-11-19): Die Steuerberatung bucht – wir liefern Belege und Buchungsstapel
+
+Das Unternehmen führt **keine eigene Finanzbuchhaltung**; die Steuerberatung bucht extern. Damit gilt **Variante B** und der Umfang schrumpft deutlich gegenüber der vollen Buchhaltung (Variante A, unten weiter dokumentiert, aber **nicht** geplant):
+
+| | Variante A (verworfen) | **Variante B (gewählt)** |
+|---|---|---|
+| Hauptbuch (Journal, Salden, Periodenabschluss) | ja | **nein** – die Steuerberatung führt die Bücher |
+| GuV, Bilanz, UVA-Vorschau | ja | **nein** (Verantwortung bleibt bei der Steuerberatung) |
+| Eingangs- und Ausgangsrechnungen | ja | **ja** (Belegerfassung mit Kontierungsvorschlag) |
+| Zahlungsstatus / Offene Posten | ja | **ja** (operativ, nicht als Buchung) |
+| Belegarchiv (Rechnungsdatei) | optional | **ja**, weil die Steuerberatung Belege braucht |
+| Export | ein Baustein | **der Kern**: Buchungsstapel + Belege, unveränderliche Läufe mit Nachträgen |
+| Bankabgleich | ja | optional, später |
+
+**Neue Meilensteine (ersetzen die Tabelle in Abschnitt 7 für die Umsetzung):**
+
+| # | Inhalt | Abnahme |
+|---|---|---|
+| E1 | **Stammdaten für den Export**: Kontenplan-Import (Liste der Konten, die die Steuerberatung nennt), Steuerkennzeichen mit Zuordnung zu deren Schlüsseln, Personenkonten (Kreditoren/Debitoren-Nummern), Kontierungsvorschläge je Lieferant/Kostenstelle | Import ohne Verlust; ungültige Konten/Steuerschlüssel werden abgewiesen; Mandantentrennung |
+| E2 | **Eingangsrechnungen**: Erfassung, Beleg-Upload (Dateiprüfung), Bestellabgleich, Freigabe über die Genehmigungs-Engine, Kontierung, Zahlungsstatus, Budget „fakturiert/bezahlt" | Brutto = Netto + Steuer exakt; Lieferanten-Rechnungsnummer eindeutig; Doppelerfassung erkannt; Beleg unveränderlich nach Freigabe |
+| E3 | **Ausgangsrechnungen**: Kunden (minimal), Rechnungen mit lückenloser Nummer, PDF, Gutschrift/Storno als Gegenbeleg | Nummernkreis lückenlos bei Parallelität; ausgestellte Rechnung unveränderlich |
+| E4 | **Export an die Steuerberatung**: Profil (Format, Konten-/Steuer-Zuordnung), Buchungsstapel + Belegpaket (ZIP), Prüfungen vor dem Export, **unveränderliche Läufe mit Prüfsumme und Nachtrag als Differenz** (wie beim Lohn-Export) | Summe aller Läufe = aktueller Belegstand; bereits exportierte Belege nie stillschweigend geändert; Download im Audit-Log |
+| E5 | Optional: Bank-Import und Zahlungsabgleich | wie F4 |
+| E6 | Kundenabrechnung nach Stunden (mit Projekten M11) | wie F6 |
+
+**Wiederverwendung:** Das Muster aus M10 (Profil, Plausibilitätsprüfung, unveränderliche Läufe, Differenz-Nachtrag, Prüfsumme) wird für E4 übernommen. Neu sind Dateiablage und -prüfung (Upload) als Plattformbaustein.
+
+**Was jetzt zuerst geklärt werden muss (blockiert E1/E4):**
+1. **Welche Software nutzt die Steuerberatung** (BMD, RZL, DATEV oder andere) und **welchen Import** erwartet sie? Bitte ein Importformat-Merkblatt oder eine Beispieldatei von der Steuerberatung besorgen. Ich erfinde kein Format und behaupte keine Kompatibilität ohne diese Vorlage; bis dahin bleibt der Export ein konfigurierbares zeilenbasiertes Profil wie beim Lohn-Export.
+2. **Soll- oder Istversteuerung** und welche Steuerfälle (Reverse Charge, innergemeinschaftlich) – bestimmt die Steuerschlüssel im Export.
+3. **Belege:** Will die Steuerberatung die Belegbilder (PDF) im Paket oder nur die Buchungsliste?
+4. **Kontierung:** Kontiert die Steuerberatung selbst (wir liefern nur Beleg + Betrag + Steuer) oder soll ein Kontierungsvorschlag mitgeliefert werden?
+
+Die Abschnitte 1–10 darunter beschreiben weiterhin die **volle Buchhaltung (Variante A)** als Referenz für den Fall, dass das Unternehmen später doch selbst bucht.
 
 ## 1. Ziel und Abgrenzung
 
