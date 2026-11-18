@@ -85,10 +85,10 @@ async function nextEntryNumber(tx: Tx, organizationId: string, year: number) {
   return `${key}-${String(seq.value).padStart(5, "0")}`;
 }
 
-interface NewEntry { date: string; text: string; source: string; sourceId?: string | null; lines: PostingLine[]; reversesId?: string | null }
+export interface NewEntry { date: string; text: string; source: string; sourceId?: string | null; lines: PostingLine[]; reversesId?: string | null }
 
 /** Schreibt einen geprüften Buchungssatz: Konten der Organisation, offene Periode, lückenlose Nummer. Soll = Haben prüft zusätzlich die Datenbank. */
-async function writeEntry(tx: Tx, ctx: Ctx, e: NewEntry) {
+export async function writeEntry(tx: Tx, ctx: Ctx, e: NewEntry) {
   const problem = validateEntry(e.lines);
   if (problem) throw new ConflictError(problem);
   const ids = [...new Set(e.lines.map((l) => l.accountId))];

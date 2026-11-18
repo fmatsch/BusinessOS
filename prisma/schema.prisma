@@ -1079,6 +1079,47 @@ model JournalLine {
   @@index([entryId])
 }
 
+// ───────── Anlagenbuchhaltung ─────────
+
+/// Anlagegut im Anlagenverzeichnis. Lineare Abschreibung monatsgenau; gebucht wird direkt gegen das Anlagenkonto.
+model FixedAsset {
+  id                       String    @id @default(cuid())
+  organizationId           String
+  /// AV-2027-0001
+  number                   String
+  name                     String
+  acquiredOn               DateTime  @db.Date
+  cost                     Decimal   @db.Decimal(19, 2)
+  residualValue            Decimal   @default(0) @db.Decimal(19, 2)
+  usefulLifeMonths         Int
+  assetAccountId           String
+  depreciationAccountId    String
+  /// ACTIVE | DISPOSED
+  status                   String    @default("ACTIVE")
+  disposedOn               DateTime? @db.Date
+  createdById              String
+  createdAt                DateTime  @default(now())
+
+  depreciations AssetDepreciation[]
+
+  @@unique([organizationId, number])
+}
+
+/// Gebuchte Monatsabschreibung (je Anlagegut und Monat höchstens eine; der Buchungssatz bleibt unveränderlich).
+model AssetDepreciation {
+  id             String       @id @default(cuid())
+  organizationId String
+  assetId        String
+  asset          FixedAsset   @relation(fields: [assetId], references: [id])
+  year           Int
+  month          Int
+  amount         Decimal      @db.Decimal(19, 2)
+  entryId        String
+  createdAt      DateTime     @default(now())
+
+  @@unique([assetId, year, month])
+}
+
 // ───────── Workflows: versionierte Regeln (Ereignis → Bedingungen → Benachrichtigung) ─────────
 
 /// Eine Version einer Workflow-Regel. Veröffentlichte Versionen werden nie geändert; es gilt die höchste Version je Schlüssel.

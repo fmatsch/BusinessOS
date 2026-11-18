@@ -18,6 +18,8 @@ test("Hauptbuch: Seiten, Berichte und Rechte", async ({ page }) => {
   await page.goto("/finance/ledger/periods");
   await expect(page.getByRole("heading", { name: /^Perioden/ })).toBeVisible();
   await expect(page.getByRole("row")).toHaveCount(13); // Kopf + 12 Monate
+  await page.goto("/finance/ledger/assets");
+  await expect(page.getByRole("heading", { name: "Anlagenbuchhaltung" })).toBeVisible();
   await logout(page);
 
   await login(page, "employee");

@@ -46,7 +46,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     <div className="max-w-6xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Hauptbuch</h1>
-        <p className="text-sm text-muted">Doppelte Buchführung: Rechnungen und Zahlungen werden ab dem Startdatum automatisch gebucht; Buchungssätze sind unveränderlich (Korrektur per Storno) und immer ausgeglichen. <Link className="text-accent underline" href="/finance/ledger/reports">Auswertungen</Link> · <Link className="text-accent underline" href="/finance/ledger/periods">Perioden</Link> · <Link className="text-accent underline" href="/finance/ledger/setup">Einrichtung</Link></p>
+        <p className="text-sm text-muted">Doppelte Buchführung: Rechnungen und Zahlungen werden ab dem Startdatum automatisch gebucht; Buchungssätze sind unveränderlich (Korrektur per Storno) und immer ausgeglichen. <Link className="text-accent underline" href="/finance/ledger/reports">Auswertungen</Link> · <Link className="text-accent underline" href="/finance/ledger/periods">Perioden</Link> · <Link className="text-accent underline" href="/finance/ledger/assets">Anlagen</Link> · <Link className="text-accent underline" href="/finance/ledger/setup">Einrichtung</Link></p>
       </div>
       <ErrorBanner message={sp.error} />
       {sp.posted !== undefined && <p role="status" className="text-sm">{sp.posted} Buchungen nachgetragen.</p>}

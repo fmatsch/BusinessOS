@@ -199,7 +199,9 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ Saldenliste, Kontoblatt (laufender Saldo), GuV, Bilanz (Aktiva = Passiva inkl. Ergebnisvortrag und laufendem Ergebnis; nicht eingeordnete Konten werden gemeldet)
 * ✅ Einordnung der Sachkonten (Aktiva/Passiva/Eigenkapital/Ertrag/Aufwand), Steuerkonten je Steuerkennzeichen; Kennzahlen der Umsatzsteuer-Voranmeldung vorbereitet
 * ✅ Umsatzsteuer-Voranmeldung als Auswertung (Bemessungsgrundlagen und Steuer je Kennzahl aus den Buchungen, Zahllast; Gutschriften mindern; Steuerkennzeichen ohne Kennzahl werden gemeldet) – Rechenhilfe, kein amtliches Formular, keine Übermittlung an FinanzOnline
-* ⚠️ Kein Kontenrahmen vorgegeben (Konten und Einordnung kommen aus Import/Steuerberatung); keine Jahresabschlussbuchungen (Ergebnisvortrag wird berechnet), keine Anlagenbuchhaltung, keine Kostenrechnung über Kostenstellen hinaus; Spesen, Lohn und Lager buchen noch nicht automatisch; Bankabgleich bucht nur den Zahlungsvermerk
+* ✅ Anlagenbuchhaltung: Anlagenverzeichnis (AV-JJJJ-NNNN), lineare Monatsabschreibung ab Anschaffungsmonat (Rundungsrest im letzten Monat), „AfA buchen“ je abgelaufenem Monat (Soll AfA-Aufwand an Anlagenkonto, je Anlage und Monat einmal, geschlossene Perioden abgewiesen), Buchwert gebucht und rechnerisch, Ausscheiden (stoppt die AfA)
+* ⚠️ Anlagen: keine Halbjahresregel, keine degressive/Sonderabschreibung, kein Anlagenspiegel mit Zu-/Abgängen, Abgangsbuchung von Hand; Anschaffung wird nicht automatisch angelegt
+* ⚠️ Kein Kontenrahmen vorgegeben (Konten und Einordnung kommen aus Import/Steuerberatung); keine Jahresabschlussbuchungen (Ergebnisvortrag wird berechnet), keine Kostenrechnung über Kostenstellen hinaus; Spesen, Lohn und Lager buchen noch nicht automatisch; Bankabgleich bucht nur den Zahlungsvermerk
 * ⚠️ Nicht von einer Steuerberatung abgenommen: vor produktiver Nutzung Konten, Steuerkonten und Bilanzgliederung prüfen lassen
 
 ## Danach

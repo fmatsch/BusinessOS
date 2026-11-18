@@ -6,6 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import { createAsset, disposeAsset, listAssets, runDepreciation } from "./gl/assets";
 import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, vatReturn, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
 import { exportReportCsv, listReports, runReport } from "./analytics/service";
 import { listWorkflowRuns, listWorkflows, publishWorkflow, setWorkflowEnabled, workflowHistory } from "./workflows/service";
@@ -108,6 +109,10 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["listAssets", "gl.read", () => listAssets(none)],
+  ["createAsset", "gl.post", () => createAsset(none, {})],
+  ["runDepreciation", "gl.post", () => runDepreciation(none, 2027, 1)],
+  ["disposeAsset", "gl.post", () => disposeAsset(none, "x", "2027-01-01")],
   ["listEntries", "gl.read", () => listEntries(none)],
   ["getEntry", "gl.read", () => getEntry(none, "x")],
   ["listPeriods", "gl.read", () => listPeriods(none, 2027)],

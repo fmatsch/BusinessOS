@@ -93,6 +93,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Hauptbuch**
 `GlSettings` (Startdatum, Bankkonto), `AccountingPeriod`, `JournalEntry` (Nummer, Quelle, `sourceId` eindeutig je Quelle, `reversesId`) und `JournalLine` (Soll/Haben, Kostenstelle, Steuerkennzeichen, Steuerrolle). Append-only per Trigger; Soll = Haben je Satz per Constraint-Trigger; `Account.kind`, `TaxCode.vatAccountId/uvaBaseCode/uvaTaxCode`.
 
+**Anlagen**
+`FixedAsset` (Kosten, Restwert, Nutzungsdauer, Konten) und `AssetDepreciation` (je Anlage und Monat eindeutig, verweist auf den Buchungssatz).
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 
