@@ -13,7 +13,7 @@ test("Analysen: Berichte, Diagramm, CSV; Rechte begrenzen die Liste", async ({ p
   await nav.getByRole("link", { name: "Budget und Verbrauch je Kostenstelle" }).click();
   await page.waitForURL(/report=budget/);
   await expect(page.getByRole("heading", { name: /^Budget und Verbrauch/ })).toBeVisible();
-  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.getByRole("table").or(page.getByText("Keine Daten."))).toBeVisible(); // frische Datenbank: evtl. noch keine Kostenstellen
 
   await nav.getByRole("link", { name: "Umsatz je Monat" }).click();
   await page.waitForURL(/report=revenue/);
