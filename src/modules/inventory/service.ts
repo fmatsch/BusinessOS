@@ -80,17 +80,16 @@ async function emitIfBelowReorder(tx: Tx, ctx: Ctx, item: { id: string; number: 
 }
 
 interface Booking { kind: string; quantity: Decimal; dim: Dim; serials: string[]; unitCost?: Decimal | null; costCenterId?: string | null; note?: string | null; goodsReceiptLineId?: string | null; transferId?: string | null; reversesId?: string | null }
-/** Schreibt eine Bewegung (bei Seriennummern je Nummer eine Bewegung mit Menge ±1). Gibt die erste zurück. */
+/** Schreibt eine Bewegung (bei Seriennummern je Nummer eine Bewegung mit Menge ±1). Gibt alle geschriebenen Bewegungen zurück. */
 async function book(tx: Tx, ctx: Ctx, item: ItemRow, b: Booking) {
   const base = { organizationId: ctx.organizationId, itemId: item.id, kind: b.kind, locationId: b.dim.locationId, batchId: b.dim.batchId, unitCost: b.unitCost?.toString() ?? null, costCenterId: b.costCenterId ?? null, note: b.note ?? null, transferId: b.transferId ?? null, createdById: ctx.userId };
-  if (b.serials.length === 0) return tx.stockMovement.create({ data: { ...base, quantity: b.quantity.toString(), goodsReceiptLineId: b.goodsReceiptLineId ?? null, reversesId: b.reversesId ?? null } });
+  if (b.serials.length === 0) return [await tx.stockMovement.create({ data: { ...base, quantity: b.quantity.toString(), goodsReceiptLineId: b.goodsReceiptLineId ?? null, reversesId: b.reversesId ?? null } })];
   const sign = b.quantity.lt(0) ? -1 : 1;
-  let first = null;
+  const all = [];
   for (const [i, serial] of b.serials.entries()) {
-    const m = await tx.stockMovement.create({ data: { ...base, quantity: String(sign), serial, goodsReceiptLineId: i === 0 ? b.goodsReceiptLineId ?? null : null, reversesId: i === 0 ? b.reversesId ?? null : null } });
-    first ??= m;
+    all.push(await tx.stockMovement.create({ data: { ...base, quantity: String(sign), serial, goodsReceiptLineId: i === 0 ? b.goodsReceiptLineId ?? null : null, reversesId: i === 0 ? b.reversesId ?? null : null } }));
   }
-  return first!;
+  return all;
 }
 
 // ───────────────────────── Lagerorte ─────────────────────────
@@ -266,7 +265,7 @@ export async function stockReceiptLine(ctx: Ctx, raw: unknown) {
     }
     if (item.tracking === "SERIAL" && !line.quantity.isInteger()) throw new ConflictError("Seriennummernartikel: ganze Mengen");
     if (line.quantity.lt(0) && (await balanceAt(tx, ctx.organizationId, item.id, dim)).plus(line.quantity).lt(0)) throw new ConflictError(`Der Bestand würde negativ (vorhanden ${(await balanceAt(tx, ctx.organizationId, item.id, dim)).toString()} ${item.unit})`);
-    const m = await book(tx, ctx, item, { kind: "RECEIPT", quantity: line.quantity, dim, serials, unitCost: line.quantity.gt(0) ? line.unitPrice : null, goodsReceiptLineId: line.id, note: `${line.orderNumber}: ${line.description}` });
+    const m = (await book(tx, ctx, item, { kind: "RECEIPT", quantity: line.quantity, dim, serials, unitCost: line.quantity.gt(0) ? line.unitPrice : null, goodsReceiptLineId: line.id, note: `${line.orderNumber}: ${line.description}` }))[0]!;
     await writeAudit(tx, ctx, { action: "stock.receipt", entityType: "StockMovement", entityId: m.id, after: { item: item.number, quantity: line.quantity.toString(), goodsReceiptLineId: line.id } });
     return m;
   });
@@ -276,8 +275,16 @@ export async function stockReceiptLine(ctx: Ctx, raw: unknown) {
 
 export async function issueStock(ctx: Ctx, raw: unknown) {
   authorize(ctx, "inventory.move");
+  return db.$transaction(async (tx) => (await issueStockTx(tx, ctx, raw)).movements[0]!);
+}
+
+/**
+ * Entnahme in der Transaktion des Aufrufers (z. B. Lieferung im Vertrieb). Keine Berechtigungsprüfung – der Aufrufer prüft sein eigenes Recht.
+ * Liefert alle geschriebenen Bewegungen (bei Seriennummern eine je Nummer).
+ */
+export async function issueStockTx(tx: Tx, ctx: Ctx, raw: unknown) {
   const input = issueInput.parse(raw);
-  return db.$transaction(async (tx) => {
+  {
     const item = await lockedItem(tx, ctx, input.itemId);
     if (input.costCenterId && !(await tx.costCenter.findFirst({ where: { id: input.costCenterId, organizationId: ctx.organizationId }, select: { id: true } }))) throw new NotFoundError("Kostenstelle");
     const serials = checkSerials(item, input.serials, input.quantity);
@@ -291,11 +298,11 @@ export async function issueStock(ctx: Ctx, raw: unknown) {
       if (here.lt(quantity)) throw new ConflictError(`Nicht genug Bestand: vorhanden ${here.toString()} ${item.unit}, gewünscht ${quantity.toString()}`);
     }
     const onHand = (await stockOf(tx, ctx.organizationId, [item.id])).get(item.id)!;
-    const m = await book(tx, ctx, item, { kind: "ISSUE", quantity: quantity.negated(), dim, serials, costCenterId: input.costCenterId, note: input.note });
-    await writeAudit(tx, ctx, { action: "stock.issue", entityType: "StockMovement", entityId: m.id, after: { item: item.number, quantity: quantity.toString(), costCenterId: input.costCenterId ?? null } });
+    const movements = await book(tx, ctx, item, { kind: "ISSUE", quantity: quantity.negated(), dim, serials, costCenterId: input.costCenterId, note: input.note });
+    await writeAudit(tx, ctx, { action: "stock.issue", entityType: "StockMovement", entityId: movements[0]!.id, after: { item: item.number, quantity: quantity.toString(), costCenterId: input.costCenterId ?? null } });
     await emitIfBelowReorder(tx, ctx, item, onHand, onHand.minus(quantity));
-    return m;
-  });
+    return { movements };
+  }
 }
 
 /** Umbuchung zwischen Lagerorten (Bestand insgesamt und Wert bleiben gleich). Beide Seiten tragen dieselbe Kennung. */
@@ -318,7 +325,7 @@ export async function transferStock(ctx: Ctx, raw: unknown) {
       if (here.lt(quantity)) throw new ConflictError(`Nicht genug Bestand am Quell-Lagerort: vorhanden ${here.toString()} ${item.unit}, gewünscht ${quantity.toString()}`);
     }
     const transferId = randomUUID();
-    const out = await book(tx, ctx, item, { kind: "TRANSFER_OUT", quantity: quantity.negated(), dim: { locationId: from, batchId }, serials, transferId, note: input.note });
+    const out = (await book(tx, ctx, item, { kind: "TRANSFER_OUT", quantity: quantity.negated(), dim: { locationId: from, batchId }, serials, transferId, note: input.note }))[0]!;
     await book(tx, ctx, item, { kind: "TRANSFER_IN", quantity, dim: { locationId: to, batchId }, serials, transferId, note: input.note });
     await writeAudit(tx, ctx, { action: "stock.transfer", entityType: "StockMovement", entityId: out.id, after: { item: item.number, quantity: quantity.toString(), from, to, transferId } });
     return { transferId };
@@ -337,7 +344,7 @@ export async function adjustStock(ctx: Ctx, raw: unknown) {
     const diff = input.counted.minus(here);
     if (diff.isZero()) throw new ConflictError("Der gezählte Bestand entspricht dem Buchbestand – nichts zu korrigieren");
     const onHand = (await stockOf(tx, ctx.organizationId, [item.id])).get(item.id)!;
-    const m = await book(tx, ctx, item, { kind: "ADJUST", quantity: diff, dim, serials: [], note: input.reason });
+    const m = (await book(tx, ctx, item, { kind: "ADJUST", quantity: diff, dim, serials: [], note: input.reason }))[0]!;
     await writeAudit(tx, ctx, { action: "stock.adjust", entityType: "StockMovement", entityId: m.id, after: { item: item.number, from: here.toString(), to: input.counted.toString(), reason: input.reason } });
     await emitIfBelowReorder(tx, ctx, item, onHand, onHand.plus(diff));
     return m;
@@ -347,9 +354,14 @@ export async function adjustStock(ctx: Ctx, raw: unknown) {
 /** Gegenbuchung zu einer Entnahme oder Korrektur. Einbuchungen aus dem Wareneingang werden in der Beschaffung korrigiert, Umbuchungen durch Gegenumbuchung. */
 export async function reverseMovement(ctx: Ctx, movementId: string, reason: string) {
   authorize(ctx, "inventory.move");
+  return db.$transaction((tx) => reverseMovementTx(tx, ctx, movementId, reason));
+}
+
+/** Gegenbuchung in der Transaktion des Aufrufers (Berechtigung prüft der Aufrufer). */
+export async function reverseMovementTx(tx: Tx, ctx: Ctx, movementId: string, reason: string) {
   const why = reason.trim();
   if (why.length < 3) throw new ConflictError("Bitte eine Begründung angeben");
-  return db.$transaction(async (tx) => {
+  {
     const m0 = await tx.stockMovement.findFirst({ where: { id: movementId, organizationId: ctx.organizationId } });
     if (!m0) throw new NotFoundError("Bewegung");
     const item = await lockedItem(tx, ctx, m0.itemId);
@@ -367,8 +379,8 @@ export async function reverseMovement(ctx: Ctx, movementId: string, reason: stri
       const here = await balanceAt(tx, ctx.organizationId, item.id, dim);
       if (here.plus(delta).lt(0)) throw new ConflictError(`Der Bestand würde negativ (vorhanden ${here.toString()} ${item.unit})`);
     }
-    const rev = await book(tx, ctx, item, { kind: "REVERSAL", quantity: delta, dim, serials: m.serial ? [m.serial] : [], reversesId: m.id, costCenterId: m.costCenterId, note: why });
+    const rev = (await book(tx, ctx, item, { kind: "REVERSAL", quantity: delta, dim, serials: m.serial ? [m.serial] : [], reversesId: m.id, costCenterId: m.costCenterId, note: why }))[0]!;
     await writeAudit(tx, ctx, { action: "stock.reverse", entityType: "StockMovement", entityId: rev.id, after: { reverses: m.id, reason: why } });
     return rev;
-  });
+  }
 }

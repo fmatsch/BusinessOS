@@ -1079,6 +1079,96 @@ model JournalLine {
   @@index([entryId])
 }
 
+// ───────── Vertrieb: Aufträge, Lieferung, Versand ─────────
+
+/// Kundenauftrag. DRAFT (bearbeitbar) → CONFIRMED (Nummer, Positionen gesperrt) → CLOSED; CANCELLED nur ohne Lieferung.
+model SalesOrder {
+  id             String    @id @default(cuid())
+  organizationId String
+  customerId     String
+  /// SO-2027-0001, vergeben beim Bestätigen (lückenlos)
+  number         String?
+  reference      String?
+  /// DRAFT | CONFIRMED | CLOSED | CANCELLED
+  status         String    @default("DRAFT")
+  orderDate      DateTime  @db.Date
+  note           String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  confirmedAt    DateTime?
+  cancelledAt    DateTime?
+
+  lines      SalesOrderLine[]
+  deliveries Delivery[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, customerId])
+}
+
+model SalesOrderLine {
+  id               String     @id @default(cuid())
+  orderId          String
+  order            SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  position         Int
+  /// Lagerartikel (leer = Leistung ohne Lagerbewegung)
+  itemId           String?
+  description      String
+  quantity         Decimal    @db.Decimal(19, 4)
+  unitPrice        Decimal    @db.Decimal(19, 4)
+  taxCodeId        String
+  revenueAccountId String?
+
+  deliveryLines DeliveryLine[]
+
+  @@unique([orderId, position])
+}
+
+/// Lieferung (Lieferschein). Beim Versand werden die Lagerbewegungen gebucht; Stornierung nur ohne Abrechnung (Gegenbuchung).
+model Delivery {
+  id             String     @id @default(cuid())
+  organizationId String
+  orderId        String
+  order          SalesOrder @relation(fields: [orderId], references: [id])
+  /// LS-2027-0001, vergeben beim Versand (lückenlos)
+  number         String?
+  /// DRAFT | SHIPPED | CANCELLED
+  status         String     @default("DRAFT")
+  shippedOn      DateTime?  @db.Date
+  carrier        String?
+  trackingNumber String?
+  note           String?
+  createdById    String
+  createdAt      DateTime   @default(now())
+  shippedAt      DateTime?
+  cancelledAt    DateTime?
+  cancelReason   String?
+
+  lines DeliveryLine[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, orderId])
+}
+
+model DeliveryLine {
+  id             String         @id @default(cuid())
+  deliveryId     String
+  delivery       Delivery       @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  orderLineId    String
+  orderLine      SalesOrderLine @relation(fields: [orderLineId], references: [id])
+  quantity       Decimal        @db.Decimal(19, 4)
+  locationId     String?
+  batchNumber    String?
+  /// Seriennummern, durch Zeilenumbruch getrennt
+  serials        String?
+  /// Lagerbewegungen dieser Zeile (nach dem Versand)
+  movementIds    String[]
+  /// Rechnungsentwurf, in dem die Zeile abgerechnet wurde
+  invoiceId      String?
+
+  @@index([deliveryId])
+  @@index([orderLineId])
+}
+
 // ───────── Lohnabrechnung (Österreich, parametrisiert) ─────────
 
 /// Versionierte Parametertabelle (Sätze, Grenzen, Tarif). Unveränderlich; neue Gültigkeit = neue Zeile. Erst nach Prüfung (validatedAt) für die Freigabe zulässig.

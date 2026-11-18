@@ -28,6 +28,8 @@ export const EVENT_CATALOG: Record<string, EventSpec> = {
   "expense.approved": { label: "Spesenabrechnung freigegeben", fields: { number: { label: "Nummer", kind: "text" }, total: { label: "Summe (€)", kind: "number" } } },
   "expense.rejected": { label: "Spesenabrechnung abgelehnt", fields: { number: { label: "Nummer", kind: "text" }, total: { label: "Summe (€)", kind: "number" } } },
   "project.billed": { label: "Projekt abgerechnet", fields: { project: { label: "Projektnummer", kind: "text" }, minutes: { label: "Minuten", kind: "number" }, net: { label: "Netto (€)", kind: "number" } } },
+  "sales.order.confirmed": { label: "Kundenauftrag bestätigt", fields: { number: { label: "Auftragsnummer", kind: "text" } } },
+  "sales.delivery.shipped": { label: "Lieferung versandt", fields: { number: { label: "Lieferscheinnummer", kind: "text" }, order: { label: "Auftragsnummer", kind: "text" } } },
   "stock.below_reorder": { label: "Mindestbestand unterschritten", fields: { item: { label: "Artikelnummer", kind: "text" }, onHand: { label: "Bestand", kind: "number" }, reorderLevel: { label: "Mindestbestand", kind: "number" } } },
 };
 

@@ -7,6 +7,7 @@ import { addShift, assignEmployee, createQualification, createRoster, createSite
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
 import * as payrun from "./payroll/run";
+import * as sales from "./sales/service";
 import { createAsset, disposeAsset, listAssets, runDepreciation } from "./gl/assets";
 import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, vatReturn, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
 import { exportReportCsv, listReports, runReport } from "./analytics/service";
@@ -110,6 +111,18 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["sales.createOrder", "sales.order.manage", () => sales.createOrder(none, {})],
+  ["sales.updateOrder", "sales.order.manage", () => sales.updateOrder(none, "x", {})],
+  ["sales.confirmOrder", "sales.order.manage", () => sales.confirmOrder(none, "x")],
+  ["sales.cancelOrder", "sales.order.manage", () => sales.cancelOrder(none, "x")],
+  ["sales.listOrders", "sales.order.read", () => sales.listOrders(none)],
+  ["sales.getOrder", "sales.order.read", () => sales.getOrder(none, "x")],
+  ["sales.getDeliveryNote", "sales.order.read", () => sales.getDeliveryNote(none, "x")],
+  ["sales.createDelivery", "sales.delivery.manage", () => sales.createDelivery(none, {})],
+  ["sales.discardDelivery", "sales.delivery.manage", () => sales.discardDelivery(none, "x")],
+  ["sales.shipDelivery", "sales.delivery.manage", () => sales.shipDelivery(none, "x", {})],
+  ["sales.cancelDelivery", "sales.delivery.manage", () => sales.cancelDelivery(none, "x", "Grund")],
+  ["sales.billOrder", "sales.bill", () => sales.billOrder(none, "x")],
   ["payroll.listParamSets", "payroll.calc.read", () => payrun.listParamSets(none)],
   ["payroll.createParamSet", "payroll.params.manage", () => payrun.createParamSet(none, {})],
   ["payroll.validateParamSet", "payroll.params.manage", () => payrun.validateParamSet(none, "x")],
