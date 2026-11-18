@@ -2,13 +2,13 @@ import Link from "next/link";
 import { requireContext } from "@/platform/tenancy/context";
 import { ForbiddenError } from "@/platform/authz/authorize";
 import { ConflictError, NotFoundError } from "@/platform/errors";
-import { accountLedger, balanceSheetReport, incomeStatementReport, trialBalance } from "@/modules/gl/service";
+import { accountLedger, balanceSheetReport, incomeStatementReport, trialBalance, vatReturn } from "@/modules/gl/service";
 import { listAccounts } from "@/modules/finance/service";
 import { formatMoney } from "@/lib/money";
 import { ErrorBanner } from "../../../action-helpers";
 
 export const dynamic = "force-dynamic";
-const TABS: [string, string][] = [["trial", "Saldenliste"], ["pl", "GuV"], ["bs", "Bilanz"], ["ledger", "Kontoblatt"]];
+const TABS: [string, string][] = [["trial", "Saldenliste"], ["pl", "GuV"], ["bs", "Bilanz"], ["uva", "Umsatzsteuer-Voranmeldung"], ["ledger", "Kontoblatt"]];
 
 export default async function LedgerReports({ searchParams }: { searchParams: Promise<{ tab?: string; from?: string; to?: string; account?: string }> }) {
   const sp = await searchParams;
@@ -37,6 +37,27 @@ export default async function LedgerReports({ searchParams }: { searchParams: Pr
       const g = await incomeStatementReport(ctx, { from, to });
       const part = (title: string, s: typeof g.income) => (<><tr><th colSpan={2} className="pt-4 text-left font-medium">{title}</th></tr>{s.rows.map((r) => <tr key={r.accountId}><td className="py-1">{r.number} {r.name}</td><td className="text-right">{money(r.amount)}</td></tr>)}<tr className="font-medium"><td className="py-1">Summe {title}</td><td className="text-right">{money(s.total)}</td></tr></>);
       body = <table className="w-full max-w-xl text-left text-sm"><caption className="sr-only">Gewinn- und Verlustrechnung</caption><tbody>{part("Erträge", g.income)}{part("Aufwände", g.expense)}<tr className="border-t border-line text-base font-semibold"><td className="pt-3">{g.result.gte(0) ? "Gewinn" : "Verlust"}</td><td className="pt-3 text-right">{money(g.result)}</td></tr></tbody></table>;
+    } else if (tab === "uva") {
+      const v = await vatReturn(ctx, { from, to });
+      body = (
+        <div className="space-y-4">
+          <p className="text-sm text-muted">Rechenhilfe für die Übertragung in FinanzOnline (kein amtliches Formular). Maßgeblich sind die Kennzahlen, die die Steuerberatung je Steuerkennzeichen hinterlegt hat.</p>
+          {v.unmapped.length > 0 && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">Steuerkennzeichen ohne Kennzahl: {v.unmapped.join(", ")} (Einrichtung).</p>}
+          <table className="w-full max-w-2xl text-left text-sm"><caption className="sr-only">Kennzahlen</caption>
+            <thead className="text-muted"><tr><th scope="col" className="py-2">Kennzahl</th><th scope="col">Art</th><th scope="col" className="text-right">Betrag</th></tr></thead>
+            <tbody className="divide-y divide-line">{v.byKz.map((k) => <tr key={k.kz + k.kind}><td className="py-1.5">{k.kz}</td><td>{k.kind}</td><td className="text-right">{money(k.amount)}</td></tr>)}</tbody>
+          </table>
+          <table className="w-full max-w-2xl text-left text-sm"><caption className="sr-only">Je Steuerkennzeichen</caption>
+            <thead className="text-muted"><tr><th scope="col" className="py-2">Steuerkennzeichen</th><th scope="col">Seite</th><th scope="col" className="text-right">Bemessungsgrundlage</th><th scope="col" className="text-right">Steuer</th></tr></thead>
+            <tbody className="divide-y divide-line">{v.lines.map((l) => <tr key={l.code}><td className="py-1.5">{l.code} ({l.rate} %)</td><td>{l.output ? "Umsatzsteuer" : "Vorsteuer"}</td><td className="text-right">{money(l.base)}</td><td className="text-right">{money(l.tax)}</td></tr>)}</tbody>
+            <tfoot>
+              <tr><td className="py-1.5" colSpan={3}>Umsatzsteuer</td><td className="text-right">{money(v.outputTax)}</td></tr>
+              <tr><td className="py-1.5" colSpan={3}>Vorsteuer</td><td className="text-right">{money(v.inputTax)}</td></tr>
+              <tr className="font-semibold"><td className="py-2" colSpan={3}>{v.payable.gte(0) ? "Zahllast" : "Gutschrift"}</td><td className="text-right">{money(v.payable)}</td></tr>
+            </tfoot>
+          </table>
+        </div>
+      );
     } else if (tab === "bs") {
       const b = await balanceSheetReport(ctx, to);
       const part = (title: string, s: typeof b.assets) => (<><tr><th colSpan={2} className="pt-4 text-left font-medium">{title}</th></tr>{s.rows.map((r) => <tr key={r.accountId}><td className="py-1">{r.number} {r.name}</td><td className="text-right">{money(r.amount)}</td></tr>)}<tr className="font-medium"><td className="py-1">Summe {title}</td><td className="text-right">{money(s.total)}</td></tr></>);

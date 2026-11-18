@@ -305,3 +305,48 @@ export async function balanceSheetReport(ctx: Ctx, asOf: string) {
   const unclassified = all.filter((x) => x.kind === null && !balanceOf(x).isZero());
   return { asOf, fiscalYearStart: fyStart, ...sheet, unclassified };
 }
+
+/**
+ * Umsatzsteuer-Voranmeldung (Auswertung): Bemessungsgrundlagen und Steuerbeträge je Kennzahl aus den Buchungen des Zeitraums
+ * (Zeilen mit Steuerkennzeichen und Rolle BASE/TAX). Ausgangsseite: Haben minus Soll, Eingangsseite: Soll minus Haben.
+ * Zahllast = Umsatzsteuer − Vorsteuer. Das ist eine Rechenhilfe zur Übertragung in FinanzOnline, kein amtliches Formular.
+ */
+export async function vatReturn(ctx: Ctx, raw: unknown) {
+  authorize(ctx, "gl.read");
+  const r = rangeInput.parse(raw);
+  const rows = await db.$queryRaw<{ taxCodeId: string; role: string; debit: Prisma.Decimal; credit: Prisma.Decimal }[]>`
+    SELECT l."taxCodeId", l."taxRole" AS role, COALESCE(SUM(l."debit"), 0) AS debit, COALESCE(SUM(l."credit"), 0) AS credit
+    FROM "JournalLine" l JOIN "JournalEntry" e ON e."id" = l."entryId"
+    WHERE e."organizationId" = ${ctx.organizationId} AND l."taxCodeId" IS NOT NULL AND l."taxRole" IS NOT NULL
+      AND (${r.from ?? null}::date IS NULL OR e."entryDate" >= ${r.from ?? null}::date) AND e."entryDate" <= ${r.to}::date
+    GROUP BY l."taxCodeId", l."taxRole"`;
+  const codes = await taxCodesForReport(db, ctx.organizationId, rows.map((x) => x.taxCodeId));
+  const lines = new Map<string, { code: string; output: boolean; rate: string; baseKz: string | null; taxKz: string | null; base: Decimal; tax: Decimal }>();
+  for (const x of rows) {
+    const t = codes.get(x.taxCodeId);
+    if (!t) continue;
+    const output = t.direction === "OUTPUT";
+    const amount = output ? d(x.credit.toString()).minus(x.debit.toString()) : d(x.debit.toString()).minus(x.credit.toString());
+    const l = lines.get(x.taxCodeId) ?? { code: t.key, output, rate: t.rate, baseKz: t.uvaBaseCode, taxKz: t.uvaTaxCode, base: d(0), tax: d(0) };
+    if (x.role === "BASE") l.base = l.base.plus(amount); else l.tax = l.tax.plus(amount);
+    lines.set(x.taxCodeId, l);
+  }
+  const all = [...lines.values()].sort((a, b) => a.code.localeCompare(b.code));
+  const sum = (xs: Decimal[]) => xs.reduce((a, x) => a.plus(x), d(0));
+  const outputTax = sum(all.filter((l) => l.output).map((l) => l.tax)), inputTax = sum(all.filter((l) => !l.output).map((l) => l.tax));
+  // Zusammenfassung je Kennzahl
+  const kz = new Map<string, { kz: string; kind: "Bemessungsgrundlage" | "Steuer"; amount: Decimal }>();
+  for (const l of all) {
+    if (l.baseKz) { const k = kz.get(`B${l.baseKz}`) ?? { kz: l.baseKz, kind: "Bemessungsgrundlage" as const, amount: d(0) }; k.amount = k.amount.plus(l.base); kz.set(`B${l.baseKz}`, k); }
+    if (l.taxKz) { const k = kz.get(`S${l.taxKz}`) ?? { kz: l.taxKz, kind: "Steuer" as const, amount: d(0) }; k.amount = k.amount.plus(l.tax); kz.set(`S${l.taxKz}`, k); }
+  }
+  return {
+    lines: all, byKz: [...kz.values()].sort((a, b) => a.kz.localeCompare(b.kz)), outputTax, inputTax, payable: outputTax.minus(inputTax),
+    unmapped: all.filter((l) => (l.base.gt(0) && !l.baseKz && l.output) || (l.tax.gt(0) && !l.taxKz)).map((l) => l.code),
+  };
+}
+
+async function taxCodesForReport(tx: Tx | typeof db, organizationId: string, ids: string[]) {
+  const rows = await tx.taxCode.findMany({ where: { organizationId, id: { in: [...new Set(ids)] } }, select: { id: true, key: true, rate: true, direction: true, uvaBaseCode: true, uvaTaxCode: true } });
+  return new Map(rows.map((t) => [t.id, { key: t.key, rate: t.rate.toString(), direction: t.direction, uvaBaseCode: t.uvaBaseCode, uvaTaxCode: t.uvaTaxCode }]));
+}

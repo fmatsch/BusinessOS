@@ -10,7 +10,7 @@ import {
 } from "@/modules/finance/service";
 import { createSupplier } from "@/modules/procurement/service";
 import {
-  accountLedger, activateGl, balanceSheetReport, closePeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, postMissingDocuments, reopenPeriod, reverseEntry, trialBalance,
+  accountLedger, activateGl, vatReturn, balanceSheetReport, closePeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, postMissingDocuments, reopenPeriod, reverseEntry, trialBalance,
 } from "./service";
 
 const hasDb = !!process.env.DATABASE_URL;
@@ -219,6 +219,24 @@ describe.skipIf(!hasDb)("Hauptbuch", () => {
     expect(b2.unclassified.map((u) => u.number)).toEqual(["9999"]);
     expect(b2.difference.toString()).not.toBe("0");
     await expect(balanceSheetReport(c.emp!, today)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("Umsatzsteuer-Voranmeldung: Bemessungsgrundlage und Steuer je Kennzahl, Zahllast; Gutschriften mindern", async () => {
+    const v = await vatReturn(c.fin!, { from: `${year}-01-01`, to: today });
+    const out = v.lines.find((l) => l.code === "ust20")!, inn = v.lines.find((l) => l.code === "vst20")!;
+    // Ausgang: Rechnungen (40 früh, 100) abzüglich Gutschrift (100) – die Rechnung über 10 (10 %) trägt ein eigenes Kennzeichen
+    expect(out.base.toString()).toBe("40");
+    expect(out.tax.toString()).toBe("8");
+    expect(inn.base.toString()).toBe("50");
+    expect(inn.tax.toString()).toBe("10");
+    expect(v.byKz.find((k) => k.kz === "022" && k.kind === "Bemessungsgrundlage")!.amount.toString()).toBe("40");
+    expect(v.byKz.find((k) => k.kz === "060")!.amount.toString()).toBe("10");
+    expect(v.outputTax.minus(v.inputTax).toString()).toBe(v.payable.toString());
+    expect(v.unmapped).toContain("ust10"); // Steuerkennzeichen ohne Kennzahl wird gemeldet
+    // ein Zeitraum ohne Buchungen ist leer; fremde Organisation sieht nichts
+    expect((await vatReturn(c.fin!, { from: "2000-01-01", to: "2000-12-31" })).lines).toEqual([]);
+    expect((await vatReturn(c.finB!, { to: today })).lines).toEqual([]);
+    await expect(vatReturn(c.emp!, { to: today })).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it("Periodenabschluss: geschlossene Periode nimmt nichts mehr an; Öffnen nur mit Berechtigung und Begründung", async () => {

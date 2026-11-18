@@ -6,7 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
-import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
+import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, vatReturn, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
 import { exportReportCsv, listReports, runReport } from "./analytics/service";
 import { listWorkflowRuns, listWorkflows, publishWorkflow, setWorkflowEnabled, workflowHistory } from "./workflows/service";
 import { adjustStock, createItem, getItem, issueStock, listItems, listStockableReceiptLines, reverseMovement, stockReceiptLine, updateItem } from "./inventory/service";
@@ -111,6 +111,7 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["listEntries", "gl.read", () => listEntries(none)],
   ["getEntry", "gl.read", () => getEntry(none, "x")],
   ["listPeriods", "gl.read", () => listPeriods(none, 2027)],
+  ["vatReturn", "gl.read", () => vatReturn(none, { to: "2027-12-31" })],
   ["trialBalance", "gl.read", () => trialBalance(none, { to: "2027-12-31" })],
   ["accountLedger", "gl.read", () => accountLedger(none, "x", { to: "2027-12-31" })],
   ["incomeStatementReport", "gl.read", () => incomeStatementReport(none, { to: "2027-12-31" })],
