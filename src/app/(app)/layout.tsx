@@ -13,6 +13,7 @@ const NAV = [
   { href: "/planned/finance", key: "nav.finance" },
   { href: "/hr", key: "nav.hr", live: true },
   { href: "/absences", key: "nav.absences", live: true },
+  { href: "/roster", key: "nav.roster", live: true },
   { href: "/procurement", key: "nav.procurement", live: true },
   { href: "/suppliers", key: "nav.suppliers", live: true },
   { href: "/planned/inventory", key: "nav.inventory" },

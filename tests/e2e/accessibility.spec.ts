@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { login } from "./helpers";
 
 // Automatische WCAG-2-A/AA-Prüfung (axe-core). Deckt nur einen Teil der Barrierefreiheit ab – ersetzt keinen manuellen Test.
-const pages = ["/", "/departments", "/cost-centers", "/budgets", "/suppliers", "/procurement", "/audit", "/copilot", "/notifications", "/settings/approvals", "/hr", "/absences", "/planned/finance"];
+const pages = ["/", "/departments", "/cost-centers", "/budgets", "/suppliers", "/procurement", "/audit", "/copilot", "/notifications", "/settings/approvals", "/hr", "/absences", "/roster", "/roster/settings", "/planned/finance"];
 
 async function scan(page: Page) {
   const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
@@ -35,6 +35,32 @@ test("Mitarbeiterprofil hat keine WCAG-A/AA-Verstöße", async ({ page }) => {
     await page.getByRole("link", { name: /Mitarbeiter Max/ }).click();
     await expect(page.locator("h1").first()).toBeVisible();
     expect(await scan(page), `Mitarbeiterprofil (${scheme})`).toEqual([]);
+  }
+});
+
+test("Dienstplan-Detailseite hat keine WCAG-A/AA-Verstöße", async ({ page }) => {
+  await login(page, "admin");
+  // eigenes Testdatum anlegen, damit der Test auch auf einer frischen Datenbank läuft
+  const tag = Date.now().toString(36).toUpperCase();
+  await page.goto("/roster/settings");
+  await page.getByLabel("Name").first().fill(`A11y-Standort ${tag}`);
+  await page.getByRole("button", { name: "Anlegen" }).first().click();
+  await expect(page.getByText(`A11y-Standort ${tag}`)).toBeVisible();
+  await page.goto("/roster");
+  await page.getByLabel("Standort").selectOption({ label: `A11y-Standort ${tag}` });
+  await page.getByLabel("Von").fill("2031-03-03");
+  await page.getByLabel("Bis").fill("2031-03-09");
+  await page.getByRole("button", { name: "Plan anlegen" }).click();
+  await page.waitForURL(/\/roster\/[^/]+$/);
+  await page.getByLabel("Datum").fill("2031-03-03");
+  await page.getByRole("button", { name: "Schicht hinzufügen" }).click();
+  await expect(page.getByText(/08:00–16:30/)).toBeVisible();
+  const url = page.url();
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto(url);
+    await expect(page.locator("h1").first()).toBeVisible();
+    expect(await scan(page), `Dienstplan (${scheme})`).toEqual([]);
   }
 });
 

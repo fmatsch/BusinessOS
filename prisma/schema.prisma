@@ -44,6 +44,7 @@ model Organization {
   auditLogs        AuditLog[]
   outbox           OutboxEvent[]
   notifications    Notification[]
+  sites            Site[]
 
   @@index([tenantId])
 }
@@ -471,4 +472,186 @@ model LeaveBalanceEntry {
   createdAt        DateTime        @default(now())
 
   @@index([organizationId, employeeId, year])
+}
+
+// ───────── Dienstplanung (M8) ─────────
+
+model Site {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  /// IANA-Zeitzone des Standorts (Schichtzeiten sind Ortszeit)
+  timeZone       String       @default("Europe/Vienna")
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  rosters Roster[]
+
+  @@unique([organizationId, name])
+}
+
+model Qualification {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  createdAt      DateTime @default(now())
+
+  employees EmployeeQualification[]
+  templates ShiftTemplate[]
+  shifts    Shift[]
+
+  @@unique([organizationId, name])
+}
+
+model EmployeeQualification {
+  employeeId      String
+  qualificationId String
+  qualification   Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+  organizationId  String
+
+  @@id([employeeId, qualificationId])
+}
+
+model ShiftTemplate {
+  id              String         @id @default(cuid())
+  organizationId  String
+  name            String
+  /// Ortszeit HH:MM; Ende vor Beginn = Schicht über Mitternacht
+  startTime       String
+  endTime         String
+  breakMinutes    Int            @default(0)
+  requiredCount   Int            @default(1)
+  qualificationId String?
+  qualification   Qualification? @relation(fields: [qualificationId], references: [id])
+
+  @@unique([organizationId, name])
+}
+
+model Roster {
+  id               String   @id @default(cuid())
+  organizationId   String
+  siteId           String
+  site             Site     @relation(fields: [siteId], references: [id])
+  startDate        DateTime @db.Date
+  endDate          DateTime @db.Date
+  /// zuletzt veröffentlichte Version (0 = noch nie veröffentlicht)
+  publishedVersion Int      @default(0)
+  /// Arbeitskopie weicht von der veröffentlichten Version ab
+  dirty            Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  shifts   Shift[]
+  versions RosterVersion[]
+  swaps    ShiftSwapRequest[]
+
+  @@index([organizationId, siteId, startDate])
+}
+
+model Shift {
+  id              String         @id @default(cuid())
+  organizationId  String
+  rosterId        String
+  roster          Roster         @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  /// Ortsdatum des Schichtbeginns
+  localDate       DateTime       @db.Date
+  startAt         DateTime
+  endAt           DateTime
+  breakMinutes    Int            @default(0)
+  requiredCount   Int            @default(1)
+  qualificationId String?
+  qualification   Qualification? @relation(fields: [qualificationId], references: [id])
+  label           String?
+
+  assignments ShiftAssignment[]
+  swaps       ShiftSwapRequest[]
+
+  @@index([organizationId, rosterId, startAt])
+}
+
+model ShiftAssignment {
+  id             String   @id @default(cuid())
+  organizationId String
+  shiftId        String
+  shift          Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  employeeId     String
+  createdAt      DateTime @default(now())
+
+  @@unique([shiftId, employeeId])
+  @@index([organizationId, employeeId])
+}
+
+/// Unveränderliche Momentaufnahme eines veröffentlichten Plans (DB-Trigger verbietet UPDATE/DELETE)
+model RosterVersion {
+  id             String   @id @default(cuid())
+  organizationId String
+  rosterId       String
+  roster         Roster   @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  version        Int
+  snapshot       Json
+  /// { added: [...], removed: [...], reason }
+  changes        Json
+  publishedById  String
+  publishedAt    DateTime @default(now())
+
+  @@unique([rosterId, version])
+}
+
+/// Aktueller veröffentlichter Stand je Person (Projektion der jüngsten Version, wird bei Veröffentlichung ersetzt)
+model PublishedShift {
+  id             String   @id @default(cuid())
+  organizationId String
+  rosterId       String
+  version        Int
+  shiftId        String
+  employeeId     String
+  startAt        DateTime
+  endAt          DateTime
+  breakMinutes   Int
+  siteName       String
+  label          String?
+
+  @@index([organizationId, employeeId, startAt])
+  @@index([rosterId])
+}
+
+enum SwapStatus {
+  PENDING_PEER
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model ShiftSwapRequest {
+  id             String     @id @default(cuid())
+  organizationId String
+  rosterId       String
+  roster         Roster     @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  shiftId        String
+  shift          Shift      @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  fromEmployeeId String
+  toEmployeeId   String
+  status         SwapStatus @default(PENDING_PEER)
+  note           String?
+  decidedById    String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([organizationId, status])
+}
+
+model RosterRules {
+  organizationId    String @id
+  /// Mindest-Tagesruhezeit zwischen zwei Schichten (Minuten)
+  restDailyMinutes  Int    @default(660)
+  /// Höchstarbeitszeit je Tag (Minuten, nach Pausenabzug)
+  maxDailyMinutes   Int    @default(720)
+  /// Höchstarbeitszeit je Woche (Minuten)
+  maxWeeklyMinutes  Int    @default(3600)
+  /// ab dieser Schichtlänge ist eine Pause nötig (Minuten)
+  breakAfterMinutes Int    @default(360)
+  minBreakMinutes   Int    @default(30)
+  /// zusammenhängende Wochenruhe (Minuten)
+  weeklyRestMinutes Int    @default(2160)
 }

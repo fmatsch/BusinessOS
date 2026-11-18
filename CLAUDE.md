@@ -21,6 +21,7 @@ Modularer Monolith: Next.js (App Router) + TypeScript strict + Prisma/PostgreSQL
 9. **KI** nur über Tools, die Services mit Benutzerkontext aufrufen; nie freies SQL; Änderungen nur nach Bestätigung.
 10. **Keine Secrets im Code**; neue Variablen in `.env.example` dokumentieren.
 10a. **HR**: sensible Felder nur über `readSensitive` (protokolliert); Salden nur als Journal (nie Zahlen überschreiben); Abwesenheitsdaten ohne Diagnosen; Zeilensperre `lockEmployee` bei Buchungen je Mitarbeiter.
+10b. **Dienstplan**: Regeln nur über `modules/roster/rules.ts` (rein, getestet); Zeiten als UTC speichern, Dauern aus UTC berechnen; veröffentlichte Versionen nie ändern (neue Version erzeugen); Mitarbeiter sehen nur `PublishedShift`, nie die Arbeitskopie.
 11. **UI-Texte** über i18n (`de` Standard, `en`). Nicht implementierte Module klar als „geplant" kennzeichnen.
 12. **Keine Behauptung ohne Verifikation**: Features erst als fertig melden, wenn Tests/Typecheck laufen.
 13. Demo-Daten nur synthetisch.

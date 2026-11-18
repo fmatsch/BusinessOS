@@ -38,6 +38,12 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 * `AbsenceType`, `AbsenceRequest` (Status, Arbeitstage), `Approval.absenceRequestId` (CHECK: genau ein Bezug – Bestellanforderung oder Abwesenheit)
 * `LeaveBalanceEntry`: Journal je Mitarbeiter/Jahr (`ENTITLEMENT`, `CARRYOVER`, `ADJUSTMENT`, `TAKEN`, `REVERSAL`), Trigger verbietet UPDATE und DELETE (Ausnahme nur mit `app.allow_journal_delete` in derselben Transaktion)
 
+**Dienstplanung (M8)**
+* `Site` (Zeitzone), `Qualification`/`EmployeeQualification`, `ShiftTemplate`, `RosterRules` (Grenzwerte je Organisation)
+* `Roster` (Plan je Standort/Zeitraum, `publishedVersion`, `dirty`) 1—n `Shift` 1—n `ShiftAssignment`; Zeiten als UTC, `localDate` = Ortsdatum des Beginns
+* `RosterVersion`: unveränderlicher Snapshot + Änderungsprotokoll (Trigger verbietet UPDATE/DELETE); `PublishedShift`: Projektion der jüngsten Version je Person (für „Mein Dienstplan", iCal)
+* `ShiftSwapRequest` (PENDING_PEER → PENDING_APPROVAL → APPROVED/REJECTED/CANCELLED)
+
 **Weitere (Schema vorbereitet, Funktion später)**
 `Account`, `JournalEntry`, `JournalLine`, `Invoice`, `Payment`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

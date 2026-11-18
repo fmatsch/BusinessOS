@@ -3,6 +3,7 @@ import { ForbiddenError, type Ctx } from "@/platform/authz/authorize";
 import { PERMISSIONS, SYSTEM_ROLES, type Permission } from "@/platform/authz/permissions";
 import { publishPolicy, readPolicy } from "@/platform/approvals/policy";
 import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAbsence, listEmployees, listPendingAbsenceApprovals, listAbsences, requestAbsence, updateEmployee, writeSensitive } from "./hr/service";
+import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { budgetOverview, committedByDepartment, setBudget } from "./budget/service";
 import { createCostCenter, createDepartment, listCostCenters, listDepartments } from "./masterdata/service";
 import { createOrder, createRequest, createSupplier, getRequest, listOrders, listRequests, listSuppliers } from "./procurement/service";
@@ -43,6 +44,22 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["requestAbsence", "hr.absence.request", () => requestAbsence(none, { typeKey: "VACATION", startDate: "2026-01-05", endDate: "2026-01-05" })],
   ["listAbsences(all)", "hr.absence.read_all", () => listAbsences(none, "all")],
   ["listAbsences(team)", "hr.absence.approve", () => listAbsences({ ...none, userId: "nobody" }, "team")],
+  ["listRosters", "roster.read_all", () => listRosters(none)],
+  ["getRoster", "roster.read_all", () => getRoster(none, "x")],
+  ["getRules", "roster.read_all", () => getRules(none)],
+  ["createSite", "roster.plan", () => createSite(none, { name: "x", timeZone: "Europe/Vienna" })],
+  ["createQualification", "roster.plan", () => createQualification(none, { name: "x" })],
+  ["setEmployeeQualification", "roster.plan", () => setEmployeeQualification(none, "e", "q", true)],
+  ["createTemplate", "roster.plan", () => createTemplate(none, { name: "x", startTime: "08:00", endTime: "16:00", breakMinutes: 30, requiredCount: 1 })],
+  ["createRoster", "roster.plan", () => createRoster(none, { siteId: "s", startDate: "2027-01-04", endDate: "2027-01-10" })],
+  ["addShift", "roster.plan", () => addShift(none, { rosterId: "r", date: "2027-01-04", startTime: "08:00", endTime: "16:00", breakMinutes: 30, requiredCount: 1 })],
+  ["removeShift", "roster.plan", () => removeShift(none, "s")],
+  ["assignEmployee", "roster.plan", () => assignEmployee(none, { shiftId: "s", employeeId: "e" })],
+  ["unassignEmployee", "roster.plan", () => unassignEmployee(none, "s", "e")],
+  ["publishRoster", "roster.publish", () => publishRoster(none, "r")],
+  ["setRules", "roster.rules.manage", () => setRules(none, { restDailyMinutes: 660, maxDailyMinutes: 720, maxWeeklyMinutes: 3600, breakAfterMinutes: 360, minBreakMinutes: 30, weeklyRestMinutes: 2160 })],
+  ["requestSwap", "roster.swap.request", () => requestSwap(none, { shiftId: "s", toEmployeeId: "e" })],
+  ["decideSwap", "roster.swap.approve", () => decideSwap(none, "x", true)],
   ["publishPolicy", "org.settings.manage", () => publishPolicy(none, [])],
   ["readPolicy", "org.settings.manage", () => readPolicy(none)],
 ];
@@ -80,8 +97,16 @@ describe("Autorisierungsmatrix: Rollen", () => {
     expect(roles("hr.absence.approve_all")).toEqual(["hr", "owner"]);
     expect(roles("hr.absence.approve")).toEqual(["hr", "manager", "owner"]); // Führungskraft nur für das eigene Team (Service prüft)
   });
+  it("Dienstplan: planen/veröffentlichen nur Dienstplanung und Inhaber; Regeln nur Inhaber; Führungskräfte lesen und geben Tausch frei", () => {
+    expect(roles("roster.plan")).toEqual(["owner", "scheduler"]);
+    expect(roles("roster.publish")).toEqual(["owner", "scheduler"]);
+    expect(roles("roster.rules.manage")).toEqual(["owner"]);
+    expect(roles("roster.read_all")).toEqual(["manager", "owner", "scheduler"]);
+    expect(roles("roster.swap.approve")).toEqual(["manager", "owner", "scheduler"]);
+    expect(roles("roster.swap.request")).toEqual(["employee", "finance", "hr", "manager", "owner", "scheduler"]);
+  });
   it("jeder Benutzer mit einer Rolle darf Abwesenheit beantragen", () => {
-    expect(roles("hr.absence.request")).toEqual(["employee", "finance", "hr", "manager", "owner"]);
+    expect(roles("hr.absence.request")).toEqual(["employee", "finance", "hr", "manager", "owner", "scheduler"]);
   });
   it("Freigabe: Führungskraft und Inhaber für Schritt 1, Finanzen und Inhaber für Schritt 2", () => {
     expect(roles("procurement.request.approve")).toEqual(["manager", "owner"]);
@@ -89,7 +114,7 @@ describe("Autorisierungsmatrix: Rollen", () => {
   });
   it("Mitarbeiter dürfen nur anfordern und Stammdaten lesen – nichts schreiben oder freigeben", () => {
     const perms = SYSTEM_ROLES.employee!.permissions;
-    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request"].includes(p))).toEqual([]);
+    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request"].includes(p))).toEqual([]);
   });
   it("Budgets ändern dürfen nur Finanzen und Inhaber", () => {
     expect(roles("finance.budget.write")).toEqual(["finance", "owner"]);

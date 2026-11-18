@@ -12,6 +12,7 @@ export interface AppContext extends Ctx {
   userName: string;
   organizationName: string;
   currency: string;
+  timeZone: string;
   organizations: { id: string; name: string }[];
 }
 
@@ -45,6 +46,7 @@ export async function requireContext(): Promise<AppContext> {
     userName: active.user.name,
     organizationName: active.organization.name,
     currency: active.organization.currency,
+    timeZone: active.organization.timeZone,
     organizations: memberships.map((m) => ({ id: m.organizationId, name: m.organization.name })),
   };
 }

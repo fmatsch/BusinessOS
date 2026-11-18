@@ -73,9 +73,23 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⚠️ Login-Sperre nach 5 Fehlversuchen kann auch Dritte aussperren (Konto-DoS); dafür MFA/IP-Drosselung nötig
 * ✅ Behoben: Login-Limit zählte auch erfolgreiche Anmeldungen; Benachrichtigungs-Link verletzte „Label in Name" (WCAG 2.5.3)
 
+## M8 – Dienstplanung
+* ✅ Standorte (mit Zeitzone), Qualifikationen, Schichtvorlagen, Pläne je Standort (≤ 42 Tage, keine Überschneidung), Schichten mit Besetzungsbedarf, Zuweisung
+* ✅ Regelprüfung (reine, getestete Funktionen; je Organisation einstellbar): Tagesruhe, Höchstarbeitszeit je Tag/Woche, Pause, Doppelbuchung, Abwesenheit, Beschäftigung, Qualifikation → **Fehler blockieren** Zuweisung und Veröffentlichung, Unterbesetzung und fehlende Wochenruhe sind **Hinweise**
+* ✅ Ortszeit je Standort, Speicherung in UTC; Zeitumstellung getestet (nicht existierende Uhrzeit wird abgelehnt, Nachtschicht = 7 h bzw. 9 h)
+* ✅ Veröffentlichen mit **Versionen**: unveränderlicher Snapshot (DB-Trigger) mit Änderungsprotokoll; Mitarbeiter sehen erst die veröffentlichte Version; Benachrichtigung der Betroffenen (neu/entfernt)
+* ✅ „Mein Dienstplan" und iCal-Export (`/roster/my.ics`, nur eigene Schichten)
+* ✅ Schichttausch: Anfrage → Zustimmung der Kollegin/des Kollegen (mit Regelprüfung) → Freigabe durch Planung oder direkte Führungskraft → automatisch neue Version
+* ✅ Sperren gegen Rennen: gleichzeitiges Zuweisen derselben Person, Veröffentlichen, Tausch-Entscheidungen
+* ⚠️ Nicht umgesetzt: Verfügbarkeiten/Wünsche, Wiederholungsmuster, automatische Schichtvorschläge, PDF-Export, Drag-and-drop (Listenansicht mit Formularen)
+* ⚠️ Regelvereinfachungen: Arbeitszeit wird dem Tag/der Woche des Schichtbeginns zugerechnet; Wochenruhe als längste Pause im Wochenfenster (nur Hinweis); Kollektivverträge nur über einstellbare Grenzwerte
+* ⚠️ Eine nach der Veröffentlichung genehmigte Abwesenheit wird erst bei der nächsten Veröffentlichung als Konflikt gemeldet (keine automatische Warnung am Plan)
+* ⚠️ Tausch nur freigebbar, wenn der Plan keine unveröffentlichten Änderungen hat; Tausch läuft nicht über die Genehmigungs-Engine
+* ⚠️ Zeiten in der Übersicht werden in der Organisationszeitzone angezeigt (Schichten anderer Zeitzonen eines Standorts werden dort nicht umgerechnet beschriftet)
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
-* ⬜ M8 Dienstplanung · M9 Zeiterfassung · M10 Lohn-Export, später Kundenabrechnung
+* ⬜ M9 Zeiterfassung · M10 Lohn-Export, später Kundenabrechnung
 * ⬜ M11 Projekte · M12 Finance (Doppik) · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security
