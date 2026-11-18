@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────── Plattform ─────────
+
+model Tenant {
+  id            String         @id @default(cuid())
+  name          String
+  createdAt     DateTime       @default(now())
+  organizations Organization[]
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  name      String
+  currency  String   @default("EUR")
+  timeZone  String   @default("Europe/Vienna")
+  locale    String   @default("de")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships     OrganizationMembership[]
+  roles           Role[]
+  departments     Department[]
+  costCenters     CostCenter[]
+  suppliers       Supplier[]
+  purchaseRequests PurchaseRequest[]
+  purchaseOrders  PurchaseOrder[]
+  budgets         Budget[]
+  auditLogs       AuditLog[]
+  outbox          OutboxEvent[]
+  notifications   Notification[]
+
+  @@index([tenantId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  locale       String   @default("de")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  memberships OrganizationMembership[]
+}
+
+model OrganizationMembership {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roleId         String
+  role           Role         @relation(fields: [roleId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Role {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String
+  name           String
+  system         Boolean      @default(false)
+
+  permissions RolePermission[]
+  memberships OrganizationMembership[]
+
+  @@unique([organizationId, key])
+}
+
+model Permission {
+  id    String @id @default(cuid())
+  key   String @unique // modul.ressource.aktion
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  actorUserId    String?
+  actorType      String       @default("USER") // USER | AI | SYSTEM
+  action         String
+  entityType     String
+  entityId       String
+  before         Json?
+  after          Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+}
+
+model OutboxEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  type           String
+  payload        Json
+  attempts       Int          @default(0)
+  processedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([processedAt, createdAt])
+}
+
+model Notification {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String
+  title          String
+  body           String?
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, userId, readAt])
+}
+
+// ───────── Stammdaten ─────────
+
+model Department {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  parentId       String?
+  parent         Department?  @relation("DeptTree", fields: [parentId], references: [id])
+  children       Department[] @relation("DeptTree")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  costCenters CostCenter[]
+
+  @@unique([organizationId, code])
+}
+
+model CostCenter {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  departmentId   String?
+  department     Department?   @relation(fields: [departmentId], references: [id])
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  budgets        Budget[]
+  purchaseOrders PurchaseOrder[]
+  requests       PurchaseRequest[]
+
+  @@unique([organizationId, code])
+}
+
+model Supplier {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number         String
+  name           String
+  email          String?
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([organizationId, number])
+}
+
+// ───────── Beschaffung & Budget (Phase 3, Schema vorbereitet) ─────────
+
+enum PurchaseRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ORDERED
+}
+
+model PurchaseRequest {
+  id             String                @id @default(cuid())
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number         String
+  title          String
+  requesterId    String
+  costCenterId   String?
+  costCenter     CostCenter?           @relation(fields: [costCenterId], references: [id])
+  status         PurchaseRequestStatus @default(DRAFT)
+  currency       String                @default("EUR")
+  totalAmount    Decimal               @db.Decimal(19, 4)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  lines          PurchaseRequestLine[]
+  orders         PurchaseOrder[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+}
+
+model PurchaseRequestLine {
+  id          String          @id @default(cuid())
+  requestId   String
+  request     PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal         @db.Decimal(19, 4)
+  unitPrice   Decimal         @db.Decimal(19, 4)
+}
+
+model PurchaseOrder {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number         String
+  requestId      String?
+  request        PurchaseRequest? @relation(fields: [requestId], references: [id])
+  supplierId     String
+  supplier       Supplier         @relation(fields: [supplierId], references: [id])
+  costCenterId   String
+  costCenter     CostCenter       @relation(fields: [costCenterId], references: [id])
+  currency       String           @default("EUR")
+  totalAmount    Decimal          @db.Decimal(19, 4)
+  status         String           @default("OPEN")
+  createdAt      DateTime         @default(now())
+
+  @@unique([organizationId, number])
+  @@index([organizationId, costCenterId])
+}
+
+model Budget {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  costCenterId   String
+  costCenter     CostCenter   @relation(fields: [costCenterId], references: [id])
+  fiscalYear     Int
+  amount         Decimal      @db.Decimal(19, 4)
+  currency       String       @default("EUR")
+
+  @@unique([costCenterId, fiscalYear])
+  @@index([organizationId])
+}

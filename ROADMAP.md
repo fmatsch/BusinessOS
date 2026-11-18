@@ -6,13 +6,15 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ✅ README, ARCHITECTURE, DATABASE, ROADMAP, SECURITY, CLAUDE
 
 ## Phase 2 – Foundation
-* 🚧 Projektstruktur, Docker Compose, PostgreSQL, Prisma-Schema
-* 🚧 Authentifizierung (Auth.js Credentials)
-* 🚧 Organisationen, Mitgliedschaften, Organization-Switcher
-* 🚧 RBAC (Rollen/Permissions), serverseitige Autorisierung
-* 🚧 Audit-Log-Grundlage
-* 🚧 Design-System, App-Rahmen (Sidebar, Topbar, Dark/Light, DE/EN)
-* ⬜ Abteilungen und Kostenstellen (CRUD)
+* ✅ Projektstruktur, Docker Compose (PostgreSQL), Prisma-Schema + Init-Migration
+* ✅ Authentifizierung (Auth.js Credentials, bcrypt, Rate Limit)
+* ✅ Organisationen, Mitgliedschaften, Organization-Switcher (Mitgliedschaft serverseitig geprüft)
+* ✅ RBAC mit Systemrollen, `authorize()` in jedem Service
+* ✅ Audit-Log-Grundlage (Schreiben in der Transaktion, Anzeige im Dashboard)
+* ✅ App-Rahmen (Sidebar, Topbar, DE/EN), geplante Module klar gekennzeichnet
+* ✅ Abteilungen und Kostenstellen (Anlegen/Listen)
+* ⚠️ Nicht gegen eine echte Datenbank verifiziert (Docker fehlt auf dem Entwicklungsrechner): Migration, Seed, Login-Ablauf, Tenant-Isolationstest (läuft in CI)
+* ⬜ Dark-Mode-Umschalter, Command Palette, Bearbeiten/Deaktivieren von Stammdaten
 
 ## Phase 3 – Funktionaler MVP (Beschaffung & Budget)
 * ⬜ Lieferanten
