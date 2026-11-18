@@ -5,6 +5,7 @@ import { publishPolicy, readPolicy } from "@/platform/approvals/policy";
 import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAbsence, listEmployees, listPendingAbsenceApprovals, listAbsences, requestAbsence, updateEmployee, writeSensitive } from "./hr/service";
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
+import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
 import { budgetOverview, committedByDepartment, setBudget } from "./budget/service";
 import { createCostCenter, createDepartment, listCostCenters, listDepartments } from "./masterdata/service";
 import { createOrder, createRequest, createSupplier, getRequest, listOrders, listRequests, listSuppliers } from "./procurement/service";
@@ -78,6 +79,11 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setPayCodeRules", "time.rules.manage", () => setPayCodeRules(none, { NIGHT: 25, SUNDAY: 100, HOLIDAY: 100, OVERTIME: 50 })],
   ["getPayCodeRules", "time.entry.read_all", () => getPayCodeRules(none)],
   ["listTeam", "time.period.approve", () => listTeam(none, 2026, 1)],
+  ["getProfile", "payroll.export.read", () => getProfile(none)],
+  ["listExports", "payroll.export.read", () => listExports(none)],
+  ["getExportFile", "payroll.export.read", () => getExportFile(none, "x")],
+  ["createExport", "payroll.export.create", () => createExport(none, { year: 2026, month: 1 })],
+  ["setProfile", "payroll.profile.manage", () => setProfile(none, {})],
   ["publishPolicy", "org.settings.manage", () => publishPolicy(none, [])],
   ["readPolicy", "org.settings.manage", () => readPolicy(none)],
 ];
@@ -128,6 +134,11 @@ describe("Autorisierungsmatrix: Rollen", () => {
     for (const p of ["time.entry.read_all", "time.entry.correct", "time.period.approve_all", "time.period.reopen", "time.account.write", "time.rules.manage"] as const)
       expect(roles(p)).toEqual(["hr", "owner"]);
     expect(roles("time.period.approve")).toEqual(["hr", "manager", "owner"]);
+  });
+  it("Lohn-Export: lesen Personalwesen, Finanzen und Inhaber; erzeugen und Format nur Personalwesen und Inhaber", () => {
+    expect(roles("payroll.export.read")).toEqual(["finance", "hr", "owner"]);
+    expect(roles("payroll.export.create")).toEqual(["hr", "owner"]);
+    expect(roles("payroll.profile.manage")).toEqual(["hr", "owner"]);
   });
   it("jeder Benutzer mit einer Rolle darf Abwesenheit beantragen", () => {
     expect(roles("hr.absence.request")).toEqual(["employee", "finance", "hr", "manager", "owner", "scheduler"]);

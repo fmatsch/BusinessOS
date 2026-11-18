@@ -100,9 +100,20 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⚠️ Kein Löschkonzept/Aufbewahrungsfristen für Zeitdaten; Einführung kann Betriebsvereinbarung/Betriebsratszustimmung erfordern (siehe MODULES.md)
 * ⚠️ Beschäftigungsdaten sind Voraussetzung für die Freigabe eines Monats (sonst gäbe es kein Soll)
 
+## M10 – Lohn-Export (Vorbereitung für die Lohnverrechnung)
+* ✅ Exportzeilen aus **freigegebenen Monaten**: Normalarbeitszeit, Mehrzeit über Soll, Zuschlagsbasen Nacht/Sonntag/Feiertag (mit Prozent aus der Zuschlagsregel), Urlaub/Krankenstand/Pflegefreistellung/Sonderurlaub in Arbeitstagen
+* ✅ Zeilenbasierte CSV mit **konfigurierbarem Profil** (Trennzeichen, Dezimalzeichen, Zeichensatz, Stunden/Minuten, Kopfzeile) und **Lohnart-Zuordnung** je Organisation; ohne Zuordnung kein Export
+* ✅ Plausibilitätsprüfung vor dem Export (nicht freigegebene Monate, fehlende Lohnarten, Beschäftigte ohne Zeit und ohne Abwesenheit, Plan/Ist-Lücken); Unvollständige nur nach ausdrücklicher Bestätigung
+* ✅ **Exportläufe unveränderlich** (DB-Trigger) mit Prüfsumme (SHA-256 der Ausgabebytes, beim Download geprüft); Änderungen nach dem Export erscheinen im nächsten Lauf als **Nachtrag mit Differenzen (auch negativ)**; Summe aller Läufe = aktueller Stand (Test)
+* ✅ Parallele Läufe je Monat serialisiert (Advisory Lock); Export und Abruf im Audit-Log; Lesen auch für Finanzen, Erzeugen/Profil nur Personalwesen/Inhaber
+* ⚠️ **Kein vorgefertigtes Format** für BMD, RZL, DATEV o. Ä.: die Datei muss in deren Importassistent zugeordnet werden – ob das Ihr Programm abdeckt, ist mit dem Lohnverrechner zu klären
+* ⚠️ Keine Lohnberechnung (Brutto/Netto, Steuern, Sozialversicherung, Sonderzahlungen, Meldungen); Zuschlagsprozente sind Konfiguration, kein Rechtsrat; Zuschlagsbasen sind Teilmengen der Arbeitszeit
+* ⚠️ Abwesenheiten: nur die vier Standardarten werden exportiert; Zeitkonto-Auszahlungen (Überstunden auszahlen) sind noch nicht abgebildet; Exporte nur für abgeschlossene Monate
+* ⚠️ Keine direkte Schnittstelle (Upload/API); die Datei wird heruntergeladen. Keine Aufbewahrungs-/Löschregeln für Exportläufe
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
-* ⬜ M10 Lohn-Export, später Kundenabrechnung
+* ⬜ Kundenabrechnung nach Stunden (braucht Projekte und Finance)
 * ⬜ M11 Projekte · M12 Finance (Doppik) · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

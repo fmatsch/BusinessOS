@@ -23,6 +23,7 @@
 | DSGVO | Datenminimierung, Löschkonzept für personenbezogene Daten, Auskunftsfähigkeit über Audit-Log |
 | HR-Daten | persönliche Angaben getrennt gespeichert, eigene Berechtigung, Lesezugriffe im Audit-Log (ohne Inhalte); Vertragsdaten nur Personal/Person selbst; Krankenstand ohne Diagnosen; Urlaubsjournal per Trigger unveränderlich |
 | Zeitdaten | eigene Daten, direkte Führungskraft nur Team, Personalwesen alle; Fremdzugriffe im Audit-Log; Buchungs- und Zeitkonto-Journal per Trigger unveränderlich; Korrekturen nur mit Begründung und Freigabe; keine Ortung/Aktivitätsmessung |
+| Lohn-Export | nur Personalwesen/Inhaber erzeugen, Finanzen darf lesen; Läufe unveränderlich mit Prüfsumme (beim Download geprüft); Download und Export im Audit-Log; CSV-Felder gegen Formel-Injection geschützt; keine Zugangsdaten zu Lohnsystemen gespeichert |
 | Demo-Daten | ausschließlich synthetisch |
 
 ## Bekannte Lücken (offen)

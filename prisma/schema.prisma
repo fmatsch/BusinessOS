@@ -776,3 +776,66 @@ model PayCodeRule {
 
   @@id([organizationId, kind])
 }
+
+// ───────── Lohn-Export (M10) ─────────
+
+/// Ausgabeprofil für den Lohn-Export (Format und Lohnart-Zuordnung). Keine Lohnberechnung.
+model PayrollProfile {
+  organizationId   String   @id
+  delimiter        String   @default(";")
+  decimalSeparator String   @default(",")
+  includeHeader    Boolean  @default(true)
+  /// utf8 | utf8-bom | latin1
+  encoding         String   @default("utf8-bom")
+  /// HOURS (Dezimalstunden) | MINUTES
+  unit             String   @default("HOURS")
+  includeSurcharge Boolean  @default(true)
+  /// { NORMAL, MEHRZEIT, NIGHT, SUNDAY, HOLIDAY, VACATION, SICK, CARE, SPECIAL } -> Lohnart-Nummer des Zielsystems
+  codes            Json     @default("{}")
+  updatedAt        DateTime @updatedAt
+}
+
+/// Ein Exportlauf für einen Monat. Unveränderlich (Trigger). Spätere Änderungen erscheinen als weiterer Lauf („Nachtrag") mit den Differenzen.
+model PayrollExport {
+  id             String   @id @default(cuid())
+  organizationId String
+  year           Int
+  month          Int
+  /// laufende Nummer je Monat: 1 = Erstexport, ab 2 = Nachtrag
+  version        Int
+  fileName       String
+  /// vollständiger Dateiinhalt als Text (vor der Zeichensatz-Umwandlung)
+  content        String
+  /// SHA-256 der ausgelieferten Bytes
+  contentHash    String
+  profile        Json
+  /// Hinweise der Plausibilitätsprüfung zum Zeitpunkt des Exports
+  checks         Json
+  /// Beschäftigte, die bewusst noch nicht enthalten waren
+  excluded       Json
+  lineCount      Int
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  lines PayrollExportLine[]
+
+  @@unique([organizationId, year, month, version])
+}
+
+model PayrollExportLine {
+  id             String        @id @default(cuid())
+  organizationId String
+  exportId       String
+  export         PayrollExport @relation(fields: [exportId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employeeNumber String
+  /// NORMAL | MEHRZEIT | NIGHT | SUNDAY | HOLIDAY | VACATION | SICK | CARE | SPECIAL
+  wageType       String
+  /// Minuten (bei Abwesenheiten: Tage); in Nachträgen vorzeichenbehaftete Differenz
+  quantity       Int
+  unit           String
+  percent        Decimal?      @db.Decimal(6, 2)
+
+  @@index([organizationId, employeeId])
+  @@index([exportId])
+}

@@ -130,7 +130,7 @@ Begründung der Reihenfolge:
 | M7 | HR-Basis | Mitarbeiter/Urlaub funktionsfähig; sensible Daten nur mit Sonderrecht (Test); Saldo = Summe des Journals |
 | M8 | Dienstplanung | Plan erstellen, Regelverstöße erkennen, veröffentlichen mit Version, Tausch freigeben; DST- und Nachtschicht-Tests grün |
 | M9 | Zeiterfassung | Buchen, korrigieren per Gegenbuchung, Periode sperren; Plan/Ist; Zeitkonto-Journal stimmt; kein Löschen/Ändern gesperrter Daten (Test) |
-| M10 | Lohn-Export (B), danach Kundenabrechnung (A) | Export reproduzierbar und unveränderlich; Rundungs- und Summentests; Abrechnung verweist auf Zeiten |
+| M10 | Lohn-Export (B) ✅ umgesetzt; Kundenabrechnung (A) später | Export reproduzierbar und unveränderlich; Rundungs- und Summentests; Abrechnung verweist auf Zeiten |
 
 Je Meilenstein wie bisher: Migration + Seed (synthetisch), Services mit `authorize()`, Audit + Outbox in derselben Transaktion, Mandanten- und Autorisierungstests, E2E-Szenario, axe-Prüfung, Doku-Update.
 

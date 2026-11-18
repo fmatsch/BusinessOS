@@ -41,6 +41,9 @@ export const PERMISSIONS = [
   "time.period.reopen",
   "time.account.write",
   "time.rules.manage",
+  "payroll.export.read",
+  "payroll.export.create",
+  "payroll.profile.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -66,6 +69,7 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "hr.absence.request",
       "roster.swap.request",
       "time.entry.own",
+      "payroll.export.read",
     ],
   },
   hr: {
@@ -93,6 +97,9 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "time.period.reopen",
       "time.account.write",
       "time.rules.manage",
+      "payroll.export.read",
+      "payroll.export.create",
+      "payroll.profile.manage",
     ],
   },
   scheduler: {

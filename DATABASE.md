@@ -50,6 +50,10 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 * `TimeAccountEntry`: Zeitkonto-Journal in Minuten (PERIOD | REVERSAL | ADJUSTMENT), append-only; Saldo = Summe
 * `PayCodeRule`: Zuschlagsprozente je Kategorie (Konfiguration für M10)
 
+**Lohn-Export (M10)**
+* `PayrollProfile` (Format und Lohnart-Zuordnung je Organisation), `PayrollExport` (Lauf je Monat, `version` 1 = Erstexport, ab 2 = Nachtrag, Inhalt, `contentHash`, Profil-Snapshot, Prüfergebnis, ausgelassene Beschäftigte), `PayrollExportLine` (Menge je Mitarbeiter/Lohnart, in Nachträgen als Differenz)
+* Läufe und Zeilen sind unveränderlich (Trigger); Summe aller Zeilen eines Monats = exportierter Stand
+
 **Weitere (Schema vorbereitet, Funktion später)**
 `Account`, `JournalEntry`, `JournalLine`, `Invoice`, `Payment`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

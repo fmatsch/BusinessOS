@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { isoFromDate } from "./calendar";
+import { countWorkingDays, isoFromDate } from "./calendar";
 
 type Tx = Prisma.TransactionClient;
 
@@ -51,4 +51,34 @@ export async function employmentsOverlapping(tx: Tx, organizationId: string, emp
   return rows
     .map((e) => ({ from: isoFromDate(e.validFrom), to: e.validTo ? isoFromDate(e.validTo) : null, weeklyHours: e.weeklyHours.toString() }))
     .filter((e) => e.from <= toIso && (e.to === null || e.to >= fromIso));
+}
+
+/** Aktive Mitarbeiter mit mindestens einem Beschäftigungsverhältnis im Zeitraum (für Vollständigkeitsprüfungen, z. B. Lohn-Export). */
+export async function employeesEmployedIn(tx: Tx, organizationId: string, fromIso: string, toIso: string) {
+  const rows = await tx.employee.findMany({
+    where: {
+      organizationId, active: true,
+      employments: { some: { validFrom: { lte: new Date(`${toIso}T00:00:00Z`) }, OR: [{ validTo: null }, { validTo: { gte: new Date(`${fromIso}T00:00:00Z`) } }] } },
+    },
+    select: { id: true, number: true, firstName: true, lastName: true },
+    orderBy: { number: "asc" },
+  });
+  return rows;
+}
+
+/** Genehmigte Abwesenheitstage (Mo–Fr ohne Feiertag) je Art im Monat, am Monatsrand abgeschnitten. */
+export async function absenceDaysByType(tx: Tx, organizationId: string, employeeId: string, year: number, month: number) {
+  const first = `${year}-${String(month).padStart(2, "0")}-01`;
+  const last = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+  const rows = await tx.absenceRequest.findMany({
+    where: { organizationId, employeeId, status: "APPROVED", startDate: { lte: new Date(`${last}T00:00:00Z`) }, endDate: { gte: new Date(`${first}T00:00:00Z`) } },
+    select: { startDate: true, endDate: true, type: { select: { key: true } } },
+  });
+  const out: Record<string, number> = {};
+  for (const r of rows) {
+    const from = isoFromDate(r.startDate) < first ? first : isoFromDate(r.startDate);
+    const to = isoFromDate(r.endDate) > last ? last : isoFromDate(r.endDate);
+    out[r.type.key] = (out[r.type.key] ?? 0) + countWorkingDays(from, to);
+  }
+  return out;
 }
