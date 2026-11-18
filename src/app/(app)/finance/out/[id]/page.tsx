@@ -51,6 +51,7 @@ export default async function CustomerInvoicePage({ params, searchParams }: { pa
       <div className="flex flex-wrap items-end gap-3 text-sm">
         {inv.status === "DRAFT" && can(ctx, "finance.invoice.out.issue") && <form action={issue}><input type="hidden" name="id" value={inv.id} /><button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Ausstellen (Nummer vergeben)</button></form>}
         {inv.status === "DRAFT" && can(ctx, "finance.invoice.out.create") && <form action={discard}><input type="hidden" name="id" value={inv.id} /><button className={secondary}>Entwurf verwerfen</button></form>}
+        {inv.status === "ISSUED" && <a href={`/finance/out/${inv.id}/pdf`} target="_blank" rel="noopener" className={secondary}>PDF öffnen</a>}
         {inv.status === "ISSUED" && inv.kind === "INVOICE" && can(ctx, "finance.invoice.out.create") && <form action={credit}><input type="hidden" name="id" value={inv.id} /><button className={secondary}>Gutschrift anlegen</button></form>}
         {inv.status === "ISSUED" && !inv.paidOn && can(ctx, "finance.invoice.out.issue") && (
           <form action={paid} className="flex items-end gap-2"><input type="hidden" name="id" value={inv.id} />
@@ -58,7 +59,7 @@ export default async function CustomerInvoicePage({ params, searchParams }: { pa
             <button className={secondary}>Als bezahlt markieren</button></form>
         )}
       </div>
-      {inv.status === "ISSUED" && <p className="text-xs text-muted">Ausgestellte Rechnungen sind unveränderlich; Korrekturen erfolgen per Gutschrift. Ein PDF der Rechnung wird noch nicht erzeugt.</p>}
+      {inv.status === "ISSUED" && <p className="text-xs text-muted">Ausgestellte Rechnungen sind unveränderlich; Korrekturen erfolgen per Gutschrift. Das PDF enthält nur die Daten dieses Belegs; Anschrift, UID und Bankverbindung des Ausstellers sind noch nicht hinterlegt.</p>}
     </div>
   );
 }

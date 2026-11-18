@@ -8,6 +8,7 @@ import { dateFromIso, isoFromDate, addDays } from "@/modules/hr/queries";
 import { receivingOf } from "@/modules/procurement/queries";
 import { allocateTax } from "./tax";
 import { matchInvoice } from "./match";
+import { renderInvoicePdf } from "./invoice-pdf";
 import { sha256Hex } from "./formats/encoding";
 import {
   accountInput, customerInput, customerInvoiceInput, paidInput, partnerAccountsInput, profileInput, supplierInvoiceInput, taxCodeInput,
@@ -448,6 +449,31 @@ export async function getCustomerInvoice(ctx: Ctx, id: string) {
     db.account.findMany({ where: { organizationId: ctx.organizationId, id: { in: inv.lines.map((l) => l.revenueAccountId) } } }),
   ]);
   return { ...inv, exported, taxCodes, accounts };
+}
+
+/** PDF einer ausgestellten Ausgangsrechnung oder Gutschrift (Entwürfe haben keine Nummer und kein PDF). */
+export async function getCustomerInvoicePdf(ctx: Ctx, id: string) {
+  const inv = await getCustomerInvoice(ctx, id); // prüft finance.invoice.read und Mandant
+  if (inv.status !== "ISSUED" || !inv.number) throw new ConflictError("Ein PDF gibt es erst für ausgestellte Belege");
+  const [org, orig] = await Promise.all([
+    db.organization.findFirst({ where: { id: ctx.organizationId }, select: { name: true } }),
+    inv.creditsId ? db.customerInvoice.findFirst({ where: { id: inv.creditsId, organizationId: ctx.organizationId }, select: { number: true } }) : Promise.resolve(null),
+  ]);
+  const rate = new Map(inv.taxCodes.map((t) => [t.id, t.rate.toString()]));
+  const bytes = renderInvoicePdf({
+    issuer: org?.name ?? "",
+    customer: inv.customer,
+    number: inv.number,
+    kind: inv.kind === "CREDIT" ? "CREDIT" : "INVOICE",
+    creditsNumber: orig?.number ?? null,
+    invoiceDate: isoFromDate(inv.invoiceDate),
+    dueDate: inv.dueDate ? isoFromDate(inv.dueDate) : null,
+    currency: inv.currency,
+    lines: inv.lines.map((l) => ({ description: l.description, quantity: l.quantity.toString(), unitPrice: l.unitPrice.toString(), netAmount: l.netAmount.toString(), taxRate: rate.get(l.taxCodeId) ?? "0" })),
+    netTotal: inv.netTotal.toString(), taxTotal: inv.taxTotal.toString(), grossTotal: inv.grossTotal.toString(),
+    note: inv.kind === "CREDIT" ? null : inv.note,
+  });
+  return { filename: `${inv.number}.pdf`, bytes };
 }
 
 /** Kennzahlen für die Übersichtsseite (nur Zähler, keine Beträge). */

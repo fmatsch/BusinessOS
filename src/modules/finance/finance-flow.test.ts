@@ -9,7 +9,7 @@ import {
   approveSupplierInvoice, cancelCustomerInvoiceDraft, cancelSupplierInvoice, createAccount, createCreditNoteDraft, createCustomer, createCustomerInvoice,
   createSupplierInvoice, createTaxCode, getFile, importAccounts, issueCustomerInvoice, listAccounts, markCustomerInvoicePaid, markSupplierInvoicePaid,
   safeFileName, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, sniffMime, updateTaxMapping, uploadFile, getSupplierInvoice, getCustomerInvoice,
-  listSupplierInvoices,
+  listSupplierInvoices, getCustomerInvoicePdf,
 } from "./service";
 import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./export";
 
@@ -210,6 +210,22 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
       await expect(issueCustomerInvoice(c.fin!, draft.id)).rejects.toThrow(/Debitorenkonto/);
       await cancelCustomerInvoiceDraft(c.fin!, draft.id);
       expect((await getCustomerInvoice(c.fin!, ids.ar1!)).number).toMatch(/^AR-\d{4}-000[1-6]$/);
+    });
+    it("PDF: nur für ausgestellte Belege, mit Berechtigung und nur in der eigenen Organisation", async () => {
+      const inv = await getCustomerInvoice(c.fin!, ids.ar1!);
+      const pdf = await getCustomerInvoicePdf(c.fin!, ids.ar1!);
+      expect(pdf.filename).toBe(`${inv.number}.pdf`);
+      const s = Buffer.from(pdf.bytes).toString("latin1");
+      expect(s.startsWith("%PDF-")).toBe(true);
+      expect(s).toContain(`(${inv.number})`);
+      expect(s).toContain("(Kunde GmbH)");
+      const again = await getCustomerInvoicePdf(c.fin!, ids.ar1!);
+      expect(Buffer.from(again.bytes).equals(Buffer.from(pdf.bytes))).toBe(true); // reproduzierbar
+      const draft = await createCustomerInvoice(c.fin!, { customerId: ids.customer, invoiceDate: d(3, 1), lines: [line("1", "1")] });
+      await expect(getCustomerInvoicePdf(c.fin!, draft.id)).rejects.toBeInstanceOf(ConflictError);
+      await cancelCustomerInvoiceDraft(c.fin!, draft.id);
+      await expect(getCustomerInvoicePdf(c.emp!, ids.ar1!)).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(getCustomerInvoicePdf(c.finB!, ids.ar1!)).rejects.toBeInstanceOf(NotFoundError);
     });
   });
 

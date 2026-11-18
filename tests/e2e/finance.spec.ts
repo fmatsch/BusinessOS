@@ -162,6 +162,15 @@ test.describe.serial("Finanzen und Export an die Steuerberatung (Browser)", () =
     await expect(page.getByRole("heading", { name: /^AR-\d{4}-\d{4}/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Ausstellen/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Gutschrift anlegen" })).toBeVisible();
+    // PDF: Link vorhanden, Antwort ist ein PDF mit der Rechnungsnummer
+    const link = page.getByRole("link", { name: "PDF öffnen" });
+    await expect(link).toBeVisible();
+    const res = await page.request.get(await link.getAttribute("href") as string);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toBe("application/pdf");
+    const body = (await res.body()).toString("latin1");
+    expect(body.startsWith("%PDF-")).toBe(true);
+    expect(body).toMatch(/\(AR-\d{4}-\d{4}\)/);
     await logout(page);
   });
 
