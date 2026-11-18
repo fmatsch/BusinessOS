@@ -198,16 +198,22 @@ model CostCenter {
 }
 
 model Supplier {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  number         String
-  name           String
-  email          String?
-  active         Boolean      @default(true)
-  createdAt      DateTime     @default(now())
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number           String
+  name             String
+  email            String?
+  /// UID-Nummer (für den Export an die Steuerberatung)
+  uid              String?
+  /// Kreditorenkonto (Personenkonto) und Standard-Aufwandskonto
+  payableAccountId String?
+  expenseAccountId String?
+  active           Boolean      @default(true)
+  createdAt        DateTime     @default(now())
 
   purchaseOrders PurchaseOrder[]
+  invoices       SupplierInvoice[]
 
   @@unique([organizationId, number])
 }
@@ -838,4 +844,217 @@ model PayrollExportLine {
 
   @@index([organizationId, employeeId])
   @@index([exportId])
+}
+
+// ───────── Finanzen: Belege und Export an die Steuerberatung (M12, Variante B) ─────────
+// Die Steuerberatung führt die Bücher; hier entstehen Belege mit Kontierung und der Export (DATEV, BMD).
+
+model Account {
+  id             String   @id @default(cuid())
+  organizationId String
+  number         String
+  name           String
+  /// GL = Sachkonto | VENDOR = Kreditor | CUSTOMER = Debitor
+  type           String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, number])
+}
+
+model TaxCode {
+  id             String  @id @default(cuid())
+  organizationId String
+  key            String
+  name           String
+  rate           Decimal @db.Decimal(5, 2)
+  /// INPUT = Vorsteuer | OUTPUT = Umsatzsteuer
+  direction      String
+  /// Steuercode im BMD-Format (BuErf: z. B. 1 = Umsatzsteuer, 2 = Vorsteuer)
+  bmdCode        String?
+  /// BU-Schlüssel im DATEV-Format laut Vorgabe der Steuerberatung
+  datevKey       String?
+  active         Boolean @default(true)
+
+  @@unique([organizationId, key])
+}
+
+model Customer {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  number              String
+  name                String
+  street              String?
+  zip                 String?
+  city                String?
+  country             String   @default("AT")
+  uid                 String?
+  paymentTermsDays    Int      @default(14)
+  receivableAccountId String?
+  revenueAccountId    String?
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  invoices CustomerInvoice[]
+
+  @@unique([organizationId, number])
+}
+
+/// Belegdatei (Rechnung als PDF/Bild), geprüft nach Typ und Größe, mit SHA-256
+model FinanceFile {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  mime           String
+  size           Int
+  sha256         String
+  data           Bytes
+  uploadedById   String
+  createdAt      DateTime @default(now())
+}
+
+model SupplierInvoice {
+  id              String    @id @default(cuid())
+  organizationId  String
+  supplierId      String
+  supplier        Supplier  @relation(fields: [supplierId], references: [id])
+  /// Rechnungsnummer des Lieferanten (je Lieferant eindeutig, solange nicht storniert; Teil-Index in der Migration)
+  invoiceNumber   String
+  invoiceDate     DateTime  @db.Date
+  dueDate         DateTime? @db.Date
+  /// INVOICE | CREDIT (Gutschrift; Beträge positiv, das Vorzeichen ergibt sich aus der Art)
+  kind            String    @default("INVOICE")
+  creditsId       String?
+  /// DRAFT | APPROVED | CANCELLED
+  status          String    @default("DRAFT")
+  /// interne Belegnummer, vergeben bei der Freigabe (ER-2027-0001)
+  voucherNumber   String?
+  currency        String    @default("EUR")
+  netTotal        Decimal   @db.Decimal(19, 4)
+  taxTotal        Decimal   @db.Decimal(19, 4)
+  grossTotal      Decimal   @db.Decimal(19, 4)
+  purchaseOrderId String?
+  fileId          String?
+  paidOn          DateTime? @db.Date
+  note            String?
+  createdById     String
+  approvedById    String?
+  approvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  lines SupplierInvoiceLine[]
+
+  @@unique([organizationId, voucherNumber])
+  @@index([organizationId, status])
+}
+
+model SupplierInvoiceLine {
+  id               String          @id @default(cuid())
+  invoiceId        String
+  invoice          SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description      String
+  netAmount        Decimal         @db.Decimal(19, 4)
+  taxCodeId        String
+  expenseAccountId String
+  costCenterId     String?
+}
+
+model CustomerInvoice {
+  id             String    @id @default(cuid())
+  organizationId String
+  customerId     String
+  customer       Customer  @relation(fields: [customerId], references: [id])
+  /// lückenlose Rechnungsnummer, vergeben beim Ausstellen (AR-2027-0001)
+  number         String?
+  invoiceDate    DateTime  @db.Date
+  dueDate        DateTime? @db.Date
+  kind           String    @default("INVOICE")
+  creditsId      String?
+  /// DRAFT | ISSUED | CANCELLED (nur Entwürfe können storniert werden; ausgestellte Rechnungen nur per Gutschrift)
+  status         String    @default("DRAFT")
+  currency       String    @default("EUR")
+  netTotal       Decimal   @db.Decimal(19, 4)
+  taxTotal       Decimal   @db.Decimal(19, 4)
+  grossTotal     Decimal   @db.Decimal(19, 4)
+  paidOn         DateTime? @db.Date
+  note           String?
+  createdById    String
+  issuedById     String?
+  issuedAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  lines CustomerInvoiceLine[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+}
+
+model CustomerInvoiceLine {
+  id               String          @id @default(cuid())
+  invoiceId        String
+  invoice          CustomerInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description      String
+  quantity         Decimal         @db.Decimal(19, 4)
+  unitPrice        Decimal         @db.Decimal(19, 4)
+  netAmount        Decimal         @db.Decimal(19, 4)
+  taxCodeId        String
+  revenueAccountId String
+  costCenterId     String?
+}
+
+model AccountingProfile {
+  organizationId       String  @id
+  /// DATEV | BMD
+  format               String  @default("BMD")
+  /// DATEV: Beraternummer und Mandantennummer
+  advisorNumber        String?
+  clientNumber         String?
+  /// Stelligkeit der Sachkonten (DATEV-Kopfzeile, Prüfung bei BMD)
+  accountLength        Int     @default(4)
+  /// Beginn des Wirtschaftsjahres (Monat)
+  fiscalYearStartMonth Int     @default(1)
+  /// BMD: Buchungssymbol (Belegkreis, max. 3 Zeichen) für Eingangs- und Ausgangsrechnungen
+  symbolIn             String  @default("ER")
+  symbolOut            String  @default("AR")
+  /// DATEV: Diktatkürzel
+  dictationCode        String  @default("")
+  includeFiles         Boolean @default(true)
+}
+
+/// Ein Exportlauf an die Steuerberatung. Unveränderlich (Trigger); jeder Beleg wird höchstens einmal exportiert.
+model AccountingExport {
+  id             String    @id @default(cuid())
+  organizationId String
+  version        Int
+  format         String
+  fileName       String
+  content        String
+  contentHash    String
+  packageName    String?
+  packageData    Bytes?
+  packageHash    String?
+  profile        Json
+  checks         Json
+  voucherCount   Int
+  lineCount      Int
+  fromDate       DateTime? @db.Date
+  toDate         DateTime? @db.Date
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  items AccountingExportItem[]
+
+  @@unique([organizationId, version])
+}
+
+model AccountingExportItem {
+  id             String           @id @default(cuid())
+  organizationId String
+  exportId       String
+  export         AccountingExport @relation(fields: [exportId], references: [id], onDelete: Cascade)
+  /// SUPPLIER | CUSTOMER
+  voucherType    String
+  voucherId      String
+
+  @@unique([organizationId, voucherType, voucherId])
 }

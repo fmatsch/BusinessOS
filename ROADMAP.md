@@ -111,9 +111,20 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⚠️ Abwesenheiten: nur die vier Standardarten werden exportiert; Zeitkonto-Auszahlungen (Überstunden auszahlen) sind noch nicht abgebildet; Exporte nur für abgeschlossene Monate
 * ⚠️ Keine direkte Schnittstelle (Upload/API); die Datei wird heruntergeladen. Keine Aufbewahrungs-/Löschregeln für Exportläufe
 
+## M12 Finance – Belegerfassung und Export an die Steuerberatung (Variante B)
+Entscheidung: kein eigenes Hauptbuch; die Steuerberatung bucht. Detailplan: [FINANCE.md](FINANCE.md).
+
+* ✅ Kontenliste (Import alles-oder-nichts), Steuerkennzeichen mit Zuordnung auf BMD-Steuercode bzw. DATEV-BU-Schlüssel, Kreditoren-/Debitorenkonten, Buchhaltungsprofil
+* ✅ Eingangsrechnungen mit Belegupload (PDF/PNG/JPEG per Inhaltsprüfung, max. 8 MB), Dublettenprüfung, **Vier-Augen-Freigabe**, fortlaufende Belegnummer `ER-JJJJ-NNNN`
+* ✅ Ausgangsrechnungen (Entwurf, Ausstellen mit lückenloser Nummer `AR-JJJJ-NNNN`, Gutschrift, bezahlt)
+* ✅ Steueraufteilung je Steuersatz (Rundung mit Restverteilung) – rein und getestet
+* ✅ Export **BMD (BuErf variabel, CSV)** und **DATEV (Buchungsstapel, EXTF 700/Format 13, Windows-1252)** inkl. Belegpaket (ZIP); jeder Beleg genau einmal; Exportläufe unveränderlich mit Prüfsumme; Vorabprüfung; Download im Audit-Log
+* ⚠️ **Beide Formate wurden nicht gegen echte BMD-/DATEV-Systeme getestet**, sondern nach den veröffentlichten Beschreibungen gebaut – vor Produktivbetrieb mit der Steuerberatung prüfen (u. a. Annahme zu Buchcode/Buchsymbol)
+* ⚠️ Kein PDF für ausgestellte Ausgangsrechnungen · keine Fremdwährung · keine Bankanbindung · keine Verknüpfung Rechnung ↔ Budget
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
 * ⬜ Kundenabrechnung nach Stunden (braucht Projekte und Finance)
-* ⬜ M11 Projekte · M12 Finance als **Belegerfassung + Export an die Steuerberatung** (Entscheidung: kein eigenes Hauptbuch) – Detailplan: [FINANCE.md](FINANCE.md), offen: Importformat der Steuerberatung · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
+* ⬜ M11 Projekte · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

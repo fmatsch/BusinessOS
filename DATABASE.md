@@ -54,8 +54,11 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 * `PayrollProfile` (Format und Lohnart-Zuordnung je Organisation), `PayrollExport` (Lauf je Monat, `version` 1 = Erstexport, ab 2 = Nachtrag, Inhalt, `contentHash`, Profil-Snapshot, Prüfergebnis, ausgelassene Beschäftigte), `PayrollExportLine` (Menge je Mitarbeiter/Lohnart, in Nachträgen als Differenz)
 * Läufe und Zeilen sind unveränderlich (Trigger); Summe aller Zeilen eines Monats = exportierter Stand
 
+**Finance (Belegerfassung und Export)**
+`Account`, `TaxCode`, `Customer`, `FinanceFile` (Belegdatei, Hash), `SupplierInvoice`/`Line`, `CustomerInvoice`/`Line`, `AccountingProfile`, `AccountingExport`/`Item`; `Supplier` um UID und Konten erweitert. Teilindex `SupplierInvoice_supplier_number_active` (keine Dubletten aktiver Rechnungen); Trigger machen Exportläufe und -positionen unveränderlich; ein Beleg steht höchstens einmal in einem Lauf (Unique org+Art+Beleg).
+
 **Weitere (Schema vorbereitet, Funktion später)**
-Noch **nicht im Schema** (nur geplant): Finanzbuchhaltung (`Account`, `JournalEntry`, `JournalLine`, Rechnungen, Zahlungen – siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`, `Customer`.
+Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 
 ## Integritätsregeln
 * `JournalEntry`: Σ Soll = Σ Haben; gebucht ⇒ unveränderlich; Storno über `reversesId`.

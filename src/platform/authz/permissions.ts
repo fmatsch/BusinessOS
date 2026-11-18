@@ -44,6 +44,15 @@ export const PERMISSIONS = [
   "payroll.export.read",
   "payroll.export.create",
   "payroll.profile.manage",
+  "finance.master.read",
+  "finance.master.write",
+  "finance.invoice.read",
+  "finance.invoice.in.create",
+  "finance.invoice.in.approve",
+  "finance.invoice.out.create",
+  "finance.invoice.out.issue",
+  "finance.export.read",
+  "finance.export.create",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -70,6 +79,15 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "roster.swap.request",
       "time.entry.own",
       "payroll.export.read",
+      "finance.master.read",
+      "finance.master.write",
+      "finance.invoice.read",
+      "finance.invoice.in.create",
+      "finance.invoice.in.approve",
+      "finance.invoice.out.create",
+      "finance.invoice.out.issue",
+      "finance.export.read",
+      "finance.export.create",
     ],
   },
   hr: {

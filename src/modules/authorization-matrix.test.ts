@@ -6,6 +6,8 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import { approveSupplierInvoice, cancelCustomerInvoiceDraft, createAccount, createCustomer, createCustomerInvoice, createSupplierInvoice, createTaxCode, financeOverview, getAccountingProfile, getCustomerInvoice, getFile, getSupplierInvoice, importAccounts, issueCustomerInvoice, listAccounts, listCustomerInvoices, listCustomers, listSupplierInvoices, listTaxCodes, markSupplierInvoicePaid, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, updateTaxMapping, uploadFile } from "./finance/service";
+import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./finance/export";
 import { budgetOverview, committedByDepartment, setBudget } from "./budget/service";
 import { createCostCenter, createDepartment, listCostCenters, listDepartments } from "./masterdata/service";
 import { createOrder, createRequest, createSupplier, getRequest, listOrders, listRequests, listSuppliers } from "./procurement/service";
@@ -84,6 +86,35 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["getExportFile", "payroll.export.read", () => getExportFile(none, "x")],
   ["createExport", "payroll.export.create", () => createExport(none, { year: 2026, month: 1 })],
   ["setProfile", "payroll.profile.manage", () => setProfile(none, {})],
+  ["listAccounts", "finance.master.read", () => listAccounts(none)],
+  ["listTaxCodes", "finance.master.read", () => listTaxCodes(none)],
+  ["listCustomers", "finance.master.read", () => listCustomers(none)],
+  ["createAccount", "finance.master.write", () => createAccount(none, { number: "1", name: "x", type: "GL" })],
+  ["importAccounts", "finance.master.write", () => importAccounts(none, "1;x")],
+  ["createTaxCode", "finance.master.write", () => createTaxCode(none, { key: "x", name: "x", rate: "20", direction: "INPUT" })],
+  ["updateTaxMapping", "finance.master.write", () => updateTaxMapping(none, "x", {})],
+  ["createCustomer", "finance.master.write", () => createCustomer(none, { number: "1", name: "x" })],
+  ["setSupplierAccounts", "finance.master.write", () => setSupplierAccounts(none, "x", {})],
+  ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
+  ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["getAccountingProfile", "finance.export.read", () => getAccountingProfile(none)],
+  ["uploadFile", "finance.invoice.in.create", () => uploadFile(none, { name: "x.pdf", bytes: new Uint8Array([1]) })],
+  ["getFile", "finance.invoice.read", () => getFile(none, "x")],
+  ["createSupplierInvoice", "finance.invoice.in.create", () => createSupplierInvoice(none, { supplierId: "s", invoiceNumber: "1", invoiceDate: "2026-01-05", lines: [{ description: "x", netAmount: "1", taxCodeId: "t" }] })],
+  ["approveSupplierInvoice", "finance.invoice.in.approve", () => approveSupplierInvoice(none, "x")],
+  ["markSupplierInvoicePaid", "finance.invoice.in.approve", () => markSupplierInvoicePaid(none, { id: "x", paidOn: "2026-01-05" })],
+  ["listSupplierInvoices", "finance.invoice.read", () => listSupplierInvoices(none)],
+  ["getSupplierInvoice", "finance.invoice.read", () => getSupplierInvoice(none, "x")],
+  ["createCustomerInvoice", "finance.invoice.out.create", () => createCustomerInvoice(none, { customerId: "c", invoiceDate: "2026-01-05", lines: [{ description: "x", quantity: "1", unitPrice: "1", taxCodeId: "t" }] })],
+  ["cancelCustomerInvoiceDraft", "finance.invoice.out.create", () => cancelCustomerInvoiceDraft(none, "x")],
+  ["issueCustomerInvoice", "finance.invoice.out.issue", () => issueCustomerInvoice(none, "x")],
+  ["listCustomerInvoices", "finance.invoice.read", () => listCustomerInvoices(none)],
+  ["getCustomerInvoice", "finance.invoice.read", () => getCustomerInvoice(none, "x")],
+  ["financeOverview", "finance.invoice.read", () => financeOverview(none)],
+  ["previewAccountingExport", "finance.export.read", () => previewAccountingExport(none)],
+  ["listAccountingExports", "finance.export.read", () => listAccountingExports(none)],
+  ["getAccountingExportFile", "finance.export.read", () => getAccountingExportFile(none, "x", "data")],
+  ["createAccountingExport", "finance.export.create", () => createAccountingExport(none, {})],
   ["publishPolicy", "org.settings.manage", () => publishPolicy(none, [])],
   ["readPolicy", "org.settings.manage", () => readPolicy(none)],
 ];
@@ -139,6 +170,10 @@ describe("Autorisierungsmatrix: Rollen", () => {
     expect(roles("payroll.export.read")).toEqual(["finance", "hr", "owner"]);
     expect(roles("payroll.export.create")).toEqual(["hr", "owner"]);
     expect(roles("payroll.profile.manage")).toEqual(["hr", "owner"]);
+  });
+  it("Finanzen: alle Belegfunktionen und der Export nur für Finanzen und Inhaber; Personalwesen, Führungskräfte und Mitarbeiter haben keinen Zugriff", () => {
+    for (const p of ["finance.master.read", "finance.master.write", "finance.invoice.read", "finance.invoice.in.create", "finance.invoice.in.approve", "finance.invoice.out.create", "finance.invoice.out.issue", "finance.export.read", "finance.export.create"] as const)
+      expect(roles(p)).toEqual(["finance", "owner"]);
   });
   it("jeder Benutzer mit einer Rolle darf Abwesenheit beantragen", () => {
     expect(roles("hr.absence.request")).toEqual(["employee", "finance", "hr", "manager", "owner", "scheduler"]);

@@ -26,6 +26,12 @@
 | Lohn-Export | nur Personalwesen/Inhaber erzeugen, Finanzen darf lesen; Läufe unveränderlich mit Prüfsumme (beim Download geprüft); Download und Export im Audit-Log; CSV-Felder gegen Formel-Injection geschützt; keine Zugangsdaten zu Lohnsystemen gespeichert |
 | Demo-Daten | ausschließlich synthetisch |
 
+## Finance (Belege und Export)
+* Beleg-Upload: Typ nur per Inhaltsprüfung (PDF/PNG/JPEG), max. 8 MB, sichere Dateinamen, SHA-256 geprüft; Auslieferung mit `nosniff` und restriktiver CSP.
+* Eingangsrechnungen: Vier-Augen-Freigabe (Erfasser ≠ Freigebender), Dublettenprüfung, Stornierung nur vor dem Export.
+* Exportläufe unveränderlich (DB-Trigger), Prüfsumme beim Download geprüft, jeder Download und Export im Audit-Log; paralleler Lauf je Organisation serialisiert.
+* Ausgangsrechnungsnummern lückenlos; Berechtigungen getrennt (Erfassen/Freigeben/Export lesen/erzeugen), Test in der Berechtigungsmatrix.
+
 ## Bekannte Lücken (offen)
 * Postgres Row-Level-Security noch nicht aktiv.
 * MFA nicht umgesetzt.

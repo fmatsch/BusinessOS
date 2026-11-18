@@ -10,7 +10,7 @@ const NAV = [
   { href: "/departments", key: "nav.departments", live: true },
   { href: "/cost-centers", key: "nav.costcenters", live: true },
   { href: "/budgets", key: "nav.budgets", live: true },
-  { href: "/planned/finance", key: "nav.finance" },
+  { href: "/finance", key: "nav.finance", live: true },
   { href: "/hr", key: "nav.hr", live: true },
   { href: "/absences", key: "nav.absences", live: true },
   { href: "/roster", key: "nav.roster", live: true },
