@@ -68,6 +68,7 @@ export const PERMISSIONS = [
   "project.time.book",
   "project.time.read_all",
   "project.bill",
+  "finance.bank.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -112,6 +113,7 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "crm.write",
       "crm.quote.create",
       "crm.contact.erase",
+      "finance.bank.manage",
       "project.read",
       "project.manage",
       "project.time.book",

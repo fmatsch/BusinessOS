@@ -33,6 +33,7 @@
 * Ausgangsrechnungsnummern lückenlos; Berechtigungen getrennt (Erfassen/Freigeben/Export lesen/erzeugen), Test in der Berechtigungsmatrix.
 * Wareneingänge sind append-only; Rechnungen mit Abweichung vom Abgleich lassen sich nur mit eigener Berechtigung, Begründung und nicht durch die erfassende Person freigeben (Audit-Log); Bestellungen werden bei Buchung und Freigabe zeilengesperrt (parallele Läufe).
 * CRM: Kontakte sind personenbezogen; Löschwunsch per Anonymisierung (eigene Berechtigung `crm.contact.erase`), Audit-Einträge enthalten nur Kennungen. Angebote brauchen eine Freigabe durch eine andere Person (Vier-Augen) und sind nach dem Versenden unveränderlich.
+* Bankauszüge: eigener XML-Leser ohne DTD/Entitäten (keine Entity-Expansion), Größen- und Zeilengrenzen, Berechtigung `finance.bank.manage`; Zahlungsvermerke tragen die Herkunft (`bankLineId`) im Audit-Log.
 
 ## Bekannte Lücken (offen)
 * Postgres Row-Level-Security noch nicht aktiv.

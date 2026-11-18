@@ -361,11 +361,21 @@ export async function cancelSupplierInvoice(ctx: Ctx, id: string) {
 export async function markSupplierInvoicePaid(ctx: Ctx, raw: unknown) {
   authorize(ctx, "finance.invoice.in.approve");
   const input = paidInput.parse(raw);
-  return db.$transaction(async (tx) => {
-    const r = await tx.supplierInvoice.updateMany({ where: { id: input.id, organizationId: ctx.organizationId, status: "APPROVED", paidOn: null }, data: { paidOn: dateFromIso(input.paidOn) } });
-    if (r.count !== 1) throw new ConflictError("Nur freigegebene, noch nicht bezahlte Belege können als bezahlt markiert werden");
-    await writeAudit(tx, ctx, { action: "supplier_invoice.paid", entityType: "SupplierInvoice", entityId: input.id, after: { paidOn: input.paidOn } });
-  });
+  return db.$transaction((tx) => paySupplierInvoiceTx(tx, ctx, input.id, input.paidOn));
+}
+
+/** Zahlung vermerken in der Transaktion des Aufrufers (Berechtigung prüft der Aufrufer). `via` hält die Herkunft im Audit-Log fest. */
+export async function paySupplierInvoiceTx(tx: Tx, ctx: Ctx, id: string, paidOn: string, via?: Record<string, string>) {
+  const r = await tx.supplierInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, status: "APPROVED", paidOn: null }, data: { paidOn: dateFromIso(paidOn) } });
+  if (r.count !== 1) throw new ConflictError("Nur freigegebene, noch nicht bezahlte Belege können als bezahlt markiert werden");
+  await writeAudit(tx, ctx, { action: "supplier_invoice.paid", entityType: "SupplierInvoice", entityId: id, after: { paidOn, ...via } });
+}
+
+/** Zahlungsvermerk zurücknehmen (z. B. Bankzuordnung gelöst). */
+export async function unpaySupplierInvoiceTx(tx: Tx, ctx: Ctx, id: string, via?: Record<string, string>) {
+  const r = await tx.supplierInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, paidOn: { not: null } }, data: { paidOn: null } });
+  if (r.count !== 1) throw new ConflictError("Der Beleg ist nicht als bezahlt vermerkt");
+  await writeAudit(tx, ctx, { action: "supplier_invoice.unpaid", entityType: "SupplierInvoice", entityId: id, after: via });
 }
 
 export async function listSupplierInvoices(ctx: Ctx) {
@@ -476,11 +486,20 @@ export async function createCreditNoteDraft(ctx: Ctx, invoiceId: string) {
 export async function markCustomerInvoicePaid(ctx: Ctx, raw: unknown) {
   authorize(ctx, "finance.invoice.out.issue");
   const input = paidInput.parse(raw);
-  return db.$transaction(async (tx) => {
-    const r = await tx.customerInvoice.updateMany({ where: { id: input.id, organizationId: ctx.organizationId, status: "ISSUED", paidOn: null }, data: { paidOn: dateFromIso(input.paidOn) } });
-    if (r.count !== 1) throw new ConflictError("Nur ausgestellte, noch nicht bezahlte Rechnungen können als bezahlt markiert werden");
-    await writeAudit(tx, ctx, { action: "customer_invoice.paid", entityType: "CustomerInvoice", entityId: input.id, after: { paidOn: input.paidOn } });
-  });
+  return db.$transaction((tx) => payCustomerInvoiceTx(tx, ctx, input.id, input.paidOn));
+}
+
+/** Zahlung vermerken in der Transaktion des Aufrufers (Berechtigung prüft der Aufrufer). */
+export async function payCustomerInvoiceTx(tx: Tx, ctx: Ctx, id: string, paidOn: string, via?: Record<string, string>) {
+  const r = await tx.customerInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, status: "ISSUED", paidOn: null }, data: { paidOn: dateFromIso(paidOn) } });
+  if (r.count !== 1) throw new ConflictError("Nur ausgestellte, noch nicht bezahlte Rechnungen können als bezahlt markiert werden");
+  await writeAudit(tx, ctx, { action: "customer_invoice.paid", entityType: "CustomerInvoice", entityId: id, after: { paidOn, ...via } });
+}
+
+export async function unpayCustomerInvoiceTx(tx: Tx, ctx: Ctx, id: string, via?: Record<string, string>) {
+  const r = await tx.customerInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, paidOn: { not: null } }, data: { paidOn: null } });
+  if (r.count !== 1) throw new ConflictError("Die Rechnung ist nicht als bezahlt vermerkt");
+  await writeAudit(tx, ctx, { action: "customer_invoice.unpaid", entityType: "CustomerInvoice", entityId: id, after: via });
 }
 
 export async function listCustomerInvoices(ctx: Ctx) {

@@ -75,6 +75,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Projekte**
 `Project`, `ProjectTime` (Journal, Gegenbuchung per `reversesId`), `ProjectBilling` + `ProjectBillingItem` (jede Zeit höchstens einmal abgerechnet, `timeId` eindeutig). Alle drei Journaltabellen per Trigger append-only.
 
+**Bankabgleich**
+`BankImport` (Datei-Prüfsumme je Organisation eindeutig) und `BankLine` (Betrag mit Vorzeichen, `dedupeKey` je Organisation eindeutig; Status OPEN/MATCHED/IGNORED, Zuordnung `matchKind`/`matchedId`).
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

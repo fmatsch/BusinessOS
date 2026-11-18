@@ -151,6 +151,12 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ Abrechnen nach Stunden: alle offenen Zeiten bis zum Stichtag → ein Rechnungsentwurf (gerundete Stunden × Satz); jede Zeit höchstens einmal (eindeutig), Abrechnung und Korrektur per Projektsperre serialisiert; abgerechnete Zeiten nur per Gutschrift korrigierbar
 * ⚠️ Projektstunden sind **getrennt** von der Arbeitszeiterfassung (kein Abgleich, kein Stempeln auf Projekte); ein Stundensatz je Projekt (keine Sätze je Person/Tätigkeit); keine Spesen/Material; keine Projektstruktur (Aufgaben, Phasen)
 
+## Bankabgleich
+* ✅ Kontoauszug importieren: CAMT.053-XML und CSV (Spalten nach Überschrift erkannt, deutsche/englische Beträge und Daten); DOCTYPE/Entitäten abgelehnt, höchstens 2 MB und 5.000 Zeilen; dieselbe Datei nie zweimal, überlappende Auszüge übernehmen nur neue Zahlungen (stabiler Schlüssel je Zahlung)
+* ✅ Zuordnung zu offenen Kunden- und Eingangsrechnungen: sicherer Vorschlag bei Belegnummer **und** Betrag (alle auf einmal übernehmbar), sonst manuell; der Betrag muss genau stimmen; der Beleg wird mit dem Buchungsdatum als bezahlt vermerkt (eine Transaktion), Zuordnung lösbar, Zahlungen ignorierbar (mit Grund)
+* ⚠️ Keine Bankanbindung (Datei-Upload); keine Teil- und Sammelzahlungen, keine Fremdwährung; MT940 und bankspezifische CSV-Layouts nur soweit die Spaltenüberschriften erkannt werden; kein Zahlungsvorschlag/Überweisungsdatei
+* ✅ Berechtigung `finance.bank.manage` (Finanzen, Inhaber)
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 

@@ -12,6 +12,7 @@ test.describe.serial("Finanzen und Export an die Steuerberatung (Browser)", () =
   const vendorAcc = rnd5(), debtorAcc = String(Number(rnd5()) % 90000 + 10000 === Number(vendorAcc) ? 10001 : Number(rnd5()));
   const taxIn = `V${tag}`, taxOut = `U${tag}`;
   const today = new Date().toISOString().slice(0, 10);
+  let arNumber = "", arUrl = "";
   const pdf = Buffer.from("%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n");
 
   function form(page: Page, button: string) {
@@ -177,6 +178,8 @@ test.describe.serial("Finanzen und Export an die Steuerberatung (Browser)", () =
     await expect(page.getByText("120,00").first()).toBeVisible();
     await page.getByRole("button", { name: /Ausstellen/ }).click();
     await expect(page.getByRole("heading", { name: /^AR-\d{4}-\d{4}/ })).toBeVisible();
+    arNumber = (await page.getByRole("heading", { name: /^AR-\d{4}-\d{4}/ }).textContent())!.slice(0, 12);
+    arUrl = new URL(page.url()).pathname;
     await expect(page.getByRole("button", { name: /Ausstellen/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Gutschrift anlegen" })).toBeVisible();
     // PDF: Link vorhanden, Antwort ist ein PDF mit der Rechnungsnummer
@@ -219,6 +222,32 @@ test.describe.serial("Finanzen und Export an die Steuerberatung (Browser)", () =
     await expect(page.getByRole("status")).toContainText("Entwürfe erzeugt");
     await page.goto("/finance/out");
     await expect(page.getByRole("row").filter({ hasText: customerName }).filter({ hasText: "Entwurf" }).first()).toBeVisible();
+    await logout(page);
+  });
+
+  test("Bankabgleich: CSV importieren, sicheren Vorschlag übernehmen, Rechnung ist bezahlt", async ({ page }) => {
+    await login(page, "admin");
+    await page.goto("/finance/bank");
+    const [y, m, d] = today.split("-");
+    const csv = `Buchungsdatum;Betrag;Auftraggeber/Empfänger;Verwendungszweck
+${d}.${m}.${y};120,00;${customerName};Zahlung ${arNumber}
+`;
+    await page.locator('input[type="file"]').setInputFiles({ name: "auszug.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf-8") });
+    await page.getByRole("button", { name: "Importieren" }).click();
+    await expect(page.getByRole("status")).toContainText("1 neue Zahlungen importiert");
+    const row = page.getByRole("row").filter({ hasText: arNumber });
+    await expect(row).toContainText(`Passt zu ${arNumber}`);
+    await page.getByRole("button", { name: /sichere Vorschläge übernehmen/ }).click();
+    await expect(page.getByRole("status")).toContainText("Zahlungen zugeordnet");
+    await page.goto(arUrl);
+    await expect(page.getByText(/bezahlt am/)).toBeVisible();
+    await page.goto("/finance/bank?tab=MATCHED");
+    await expect(page.getByRole("row").filter({ hasText: arNumber })).toContainText("Kundenrechnung");
+    // dieselbe Datei nochmals: abgewiesen
+    await page.goto("/finance/bank");
+    await page.locator('input[type="file"]').setInputFiles({ name: "auszug.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf-8") });
+    await page.getByRole("button", { name: "Importieren" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "bereits importiert" })).toBeVisible();
     await logout(page);
   });
 

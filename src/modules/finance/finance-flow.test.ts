@@ -13,6 +13,7 @@ import {
 } from "./service";
 import { createDunningNotice, getDunningPdf, listOpenItems } from "./receivables";
 import { addDaysIso } from "./dunning";
+import { acceptExactSuggestions, candidatesForLine, ignoreBankLine, importBankStatement, listBankLines, matchBankLine, reopenBankLine, unmatchBankLine } from "./bank-service";
 import { addMonthsClamped } from "./recurring";
 import { createRecurring, listRecurring, runRecurringInvoices, setRecurringActive } from "./recurring-invoices";
 import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./export";
@@ -97,7 +98,7 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
     const orgs = [orgA, orgB];
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.allow_journal_delete', 'on', true)`;
-      for (const m of ["accountingExport", "auditLog", "dunningNotice", "recurringInvoice", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
+      for (const m of ["accountingExport", "auditLog", "dunningNotice", "bankLine", "bankImport", "recurringInvoice", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.user.deleteMany({ where: { id: { in: userIds } } });
@@ -490,6 +491,84 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
       expect(r.failed.map((f) => f.templateId)).toContain(bad.id);
       expect(r.created.filter((x) => x.templateId === good.id)).toHaveLength(1);
       expect(await draftsOf(bad.id)).toHaveLength(0);
+    });
+  });
+
+  describe("Bankabgleich", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const camt = (rows: { amount: string; credit: boolean; date?: string; name: string; ref: string }[]) =>
+      `<?xml version="1.0"?><Document><BkToCstmrStmt><Stmt>${rows.map((r) => `<Ntry><Amt Ccy="EUR">${r.amount}</Amt><CdtDbtInd>${r.credit ? "CRDT" : "DBIT"}</CdtDbtInd><BookgDt><Dt>${r.date ?? today}</Dt></BookgDt><NtryDtls><TxDtls><RltdPties><${r.credit ? "Dbtr" : "Cdtr"}><Nm>${r.name}</Nm></${r.credit ? "Dbtr" : "Cdtr"}></RltdPties><RmtInf><Ustrd>${r.ref}</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>`).join("")}</Stmt></BkToCstmrStmt></Document>`;
+    let arId = "", arNo = "", erId = "", erNo = "";
+
+    it("Vorbereitung: ausgestellte Rechnung und freigegebene Eingangsrechnung", async () => {
+      const ar = await createCustomerInvoice(c.fin!, { customerId: ids.customer, invoiceDate: today, lines: [{ description: "Beratung", quantity: "1", unitPrice: "100", taxCodeId: ids.ust20 }] });
+      await issueCustomerInvoice(c.fin!, ar.id);
+      arId = ar.id; arNo = (await getCustomerInvoice(c.fin!, ar.id)).number!;
+      erNo = `BANK-${Date.now().toString(36)}`;
+      const er = await createSupplierInvoice(c.fin!, { supplierId: ids.supplier, invoiceNumber: erNo, invoiceDate: today, lines: [{ description: "Leistung", netAmount: "100", taxCodeId: ids.vst20, expenseAccountId: ids.acc7000 }] });
+      await approveSupplierInvoice(c.fin2!, er.id);
+      erId = er.id;
+    });
+
+    it("Import: Berechtigung, Dubletten, überlappende Auszüge, fehlerhafte Dateien", async () => {
+      const file = camt([{ amount: "120.00", credit: true, name: "Kunde GmbH", ref: `Zahlung ${arNo}` }, { amount: "120.00", credit: false, name: "Müller & Söhne GmbH", ref: `Rechnung ${erNo}` }, { amount: "77.77", credit: true, name: "Unbekannt", ref: "Spende" }]);
+      await expect(importBankStatement(c.emp!, { filename: "a.xml", content: file })).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(importBankStatement(c.fin!, { filename: "a.xml", content: "<x>" })).rejects.toBeInstanceOf(ConflictError);
+      await expect(importBankStatement(c.fin!, { filename: "a.csv", content: "Datum;Betrag\n10.03.2027;abc" })).rejects.toThrow(/Zeile 2/);
+      const r = await importBankStatement(c.fin!, { filename: "auszug.xml", content: file });
+      expect(r).toMatchObject({ format: "CAMT", lines: 3, created: 3, skipped: 0 });
+      await expect(importBankStatement(c.fin!, { filename: "auszug.xml", content: file })).rejects.toThrow(/bereits importiert/);
+      const overlap = camt([{ amount: "120.00", credit: true, name: "Kunde GmbH", ref: `Zahlung ${arNo}` }, { amount: "5.00", credit: true, name: "Neu", ref: "neu" }]);
+      expect(await importBankStatement(c.fin!, { filename: "auszug2.xml", content: overlap })).toMatchObject({ lines: 2, created: 1, skipped: 1 });
+      await expect(listBankLines(c.finB!)).resolves.toEqual([]); // Mandantentrennung
+    });
+
+    it("Vorschläge: sichere Zuordnung per Belegnummer und Betrag; unsichere bleiben offen", async () => {
+      const open = await listBankLines(c.fin!, "OPEN");
+      const byRef = (t: string) => open.find((l) => l.reference.includes(t))!;
+      expect(byRef(arNo).suggestion).toMatchObject({ strength: "EXACT", candidate: { id: arId } });
+      expect(byRef(erNo).suggestion).toMatchObject({ strength: "EXACT", candidate: { id: erId } });
+      expect(byRef("Spende").suggestion).toBeNull();
+      // Betrag stimmt nicht → Zuordnung wird abgewiesen
+      await expect(matchBankLine(c.fin!, byRef("Spende").id, arId)).rejects.toThrow(/Betrag stimmt nicht/);
+      await expect(candidatesForLine(c.fin!, byRef("Spende").id)).resolves.toEqual([]);
+      await expect(matchBankLine(c.emp!, byRef(arNo).id, arId)).rejects.toBeInstanceOf(ForbiddenError);
+
+      const r = await acceptExactSuggestions(c.fin!);
+      expect(r).toMatchObject({ matched: 2, failed: [] });
+      const ar = await getCustomerInvoice(c.fin!, arId);
+      expect(ar.paidOn?.toISOString().slice(0, 10)).toBe(today); // Buchungsdatum der Zahlung
+      expect((await db.supplierInvoice.findUniqueOrThrow({ where: { id: erId } })).paidOn).not.toBeNull();
+      expect((await listBankLines(c.fin!, "MATCHED")).map((l) => l.matchKind).sort()).toEqual(["CUSTOMER_INVOICE", "SUPPLIER_INVOICE"]);
+      expect(await db.auditLog.count({ where: { organizationId: orgA, action: "bank.match" } })).toBe(2);
+    });
+
+    it("Zuordnung lösen macht Zahlung und Beleg wieder offen; Ignorieren braucht einen Grund", async () => {
+      const matched = (await listBankLines(c.fin!, "MATCHED")).find((l) => l.matchKind === "CUSTOMER_INVOICE")!;
+      await unmatchBankLine(c.fin!, matched.id);
+      expect((await getCustomerInvoice(c.fin!, arId)).paidOn).toBeNull();
+      await expect(unmatchBankLine(c.fin!, matched.id)).rejects.toBeInstanceOf(ConflictError);
+      await matchBankLine(c.fin!, matched.id, arId); // erneut zuordnen
+      expect((await getCustomerInvoice(c.fin!, arId)).paidOn).not.toBeNull();
+
+      const spende = (await listBankLines(c.fin!, "OPEN")).find((l) => l.reference === "Spende")!;
+      await expect(ignoreBankLine(c.fin!, spende.id, "x")).rejects.toThrow(/Grund/);
+      await ignoreBankLine(c.fin!, spende.id, "Spende, kein Beleg");
+      expect((await listBankLines(c.fin!, "IGNORED")).map((l) => l.id)).toContain(spende.id);
+      await reopenBankLine(c.fin!, spende.id);
+      await expect(reopenBankLine(c.fin!, spende.id)).rejects.toBeInstanceOf(ConflictError);
+    });
+
+    it("zwei Zahlungen für denselben Beleg: nur eine wird zugeordnet", async () => {
+      const ar = await createCustomerInvoice(c.fin!, { customerId: ids.customer, invoiceDate: today, lines: [{ description: "x", quantity: "1", unitPrice: "50", taxCodeId: ids.ust20 }] });
+      await issueCustomerInvoice(c.fin!, ar.id);
+      const no = (await getCustomerInvoice(c.fin!, ar.id)).number!;
+      await importBankStatement(c.fin!, { filename: "doppelt.xml", content: camt([{ amount: "60.00", credit: true, name: "Kunde GmbH", ref: `${no} erste` }, { amount: "60.00", credit: true, name: "Kunde GmbH", ref: `${no} zweite` }]) });
+      const lines = (await listBankLines(c.fin!, "OPEN")).filter((l) => l.reference.includes(no));
+      expect(lines).toHaveLength(2);
+      const r = await Promise.allSettled(lines.map((l) => matchBankLine(c.fin!, l.id, ar.id)));
+      expect(r.filter((x) => x.status === "fulfilled")).toHaveLength(1);
+      expect((await listBankLines(c.fin!, "OPEN")).filter((l) => l.reference.includes(no))).toHaveLength(1);
     });
   });
 });

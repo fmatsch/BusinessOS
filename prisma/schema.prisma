@@ -1000,6 +1000,55 @@ model SupplierInvoiceLine {
   costCenterId     String?
 }
 
+// ───────── Bankabgleich ─────────
+
+/// Importierter Kontoauszug (CAMT.053 oder CSV). Dieselbe Datei wird nicht zweimal importiert.
+model BankImport {
+  id             String   @id @default(cuid())
+  organizationId String
+  filename       String
+  /// CAMT | CSV
+  format         String
+  sha256         String
+  lineCount      Int
+  newCount       Int
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  lines BankLine[]
+
+  @@unique([organizationId, sha256])
+}
+
+/// Eine Zahlung aus dem Kontoauszug (Betrag mit Vorzeichen: Eingang +, Ausgang −). Nur der Zuordnungsstatus ändert sich.
+model BankLine {
+  id               String     @id @default(cuid())
+  organizationId   String
+  importId         String
+  import           BankImport @relation(fields: [importId], references: [id])
+  bookingDate      DateTime   @db.Date
+  amount           Decimal    @db.Decimal(19, 4)
+  currency         String     @default("EUR")
+  counterpartyName String?
+  counterpartyIban String?
+  reference        String     @default("")
+  endToEndId       String?
+  /// stabiler Schlüssel gegen doppelte Importe überlappender Auszüge
+  dedupeKey        String
+  /// OPEN | MATCHED | IGNORED
+  status           String     @default("OPEN")
+  /// CUSTOMER_INVOICE | SUPPLIER_INVOICE
+  matchKind        String?
+  matchedId        String?
+  decidedById      String?
+  decidedAt        DateTime?
+  note             String?
+  createdAt        DateTime   @default(now())
+
+  @@unique([organizationId, dedupeKey])
+  @@index([organizationId, status, bookingDate])
+}
+
 // ───────── Projekte: Leistungserfassung und Abrechnung nach Stunden ─────────
 
 /// Projekt. Die Projektstunden sind eine eigene Leistungserfassung (unabhängig von der Arbeitszeiterfassung).

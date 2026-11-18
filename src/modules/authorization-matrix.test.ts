@@ -6,6 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import { acceptExactSuggestions, candidatesForLine, ignoreBankLine, importBankStatement, listBankLines, matchBankLine, reopenBankLine, unmatchBankLine } from "./finance/bank-service";
 import { billProject, bookProjectTime, createProject, getProject, listProjects, reverseProjectTime, setProjectStatus } from "./projects/service";
 import { acceptQuote, addActivity, anonymizeContact, cancelQuote, createContact, createQuote, declineQuote, decideQuote, duplicateQuote, getCrmCustomer, getQuote, getQuotePdf, listCrmCustomers, listPendingQuoteApprovals, listQuotes, sendQuote, submitQuote } from "./crm/service";
 import { createRecurring, listRecurring, runRecurringInvoices, setRecurringActive } from "./finance/recurring-invoices";
@@ -102,6 +103,14 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["importBankStatement", "finance.bank.manage", () => importBankStatement(none, { filename: "a.csv", content: "x" })],
+  ["listBankLines", "finance.bank.manage", () => listBankLines(none)],
+  ["candidatesForLine", "finance.bank.manage", () => candidatesForLine(none, "x")],
+  ["matchBankLine", "finance.bank.manage", () => matchBankLine(none, "x", "y")],
+  ["unmatchBankLine", "finance.bank.manage", () => unmatchBankLine(none, "x")],
+  ["ignoreBankLine", "finance.bank.manage", () => ignoreBankLine(none, "x", "grund")],
+  ["reopenBankLine", "finance.bank.manage", () => reopenBankLine(none, "x")],
+  ["acceptExactSuggestions", "finance.bank.manage", () => acceptExactSuggestions(none)],
   ["listProjects", "project.read", () => listProjects(none)],
   ["getProject", "project.read", () => getProject(none, "x")],
   ["reverseProjectTime", "project.read", () => reverseProjectTime(none, "x", "Grund")],

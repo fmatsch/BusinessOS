@@ -14,6 +14,7 @@ export default async function FinancePage() {
     ["/finance/in", "Eingangsrechnungen", `${draftIn} warten auf Freigabe · ${approvedIn} unbezahlt`, "finance.invoice.read"],
     ["/finance/out", "Ausgangsrechnungen", `${draftOut} Entwürfe · ${issuedOut} unbezahlt`, "finance.invoice.read"],
     ["/finance/recurring", "Wiederkehrende Rechnungen", "Vorlagen für Wartung, Miete, Abos – erzeugen Entwürfe", "finance.invoice.read"],
+    ["/finance/bank", "Bankabgleich", "Kontoauszug importieren, Zahlungen Rechnungen zuordnen", "finance.bank.manage"],
     ["/finance/receivables", "Offene Posten und Mahnwesen", "Alterung, Zahlungserinnerung, Mahnungen als PDF", "finance.invoice.read"],
     ["/finance/export", "Export an die Steuerberatung", `${exports} Läufe bisher`, "finance.export.read"],
     ["/finance/settings", "Einstellungen: Konten, Steuern, Format", "Kontenplan, Steuerkennzeichen, Zuordnung, DATEV/BMD", "finance.master.read"],
