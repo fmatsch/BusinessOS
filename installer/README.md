@@ -84,6 +84,6 @@ ubuntu:  --host <Name|IP>  --ssh-port <Port>  --ssh-user <Benutzer>  --key <Schl
 
 * Nur **Ubuntu 22.04+** als Server; andere Linux-Distributionen oder Windows-Server werden nicht unterstützt.
 * Das Einrichtungsskript baut die Anwendung **auf dem Server** (Internetzugang für `npm` und Paketquellen nötig, Build braucht Zeit und Arbeitsspeicher).
-* Die Schritte auf dem Ubuntu-Server sind in dieser Entwicklungsumgebung **nur statisch (Syntax, Inhalte) und gegen einen SSH-Testserver geprüft, nicht gegen einen echten Ubuntu-Server durchlaufen** – bitte erst auf einem Testserver ausprobieren.
+* Der Ubuntu-Ablauf wurde **vollständig auf Ubuntu 24.04 (WSL2, ohne Domain, ohne Firewall) durchlaufen**: Neuinstallation und Aktualisierung, danach Anmeldung und Seitenaufrufe über nginx. **Nicht erprobt:** Ubuntu 22.04, ein Server im Internet mit Domain und Let's-Encrypt-Zertifikat, die Firewall-Option, Anmeldung per Schlüsseldatei. Bitte zuerst auf einem Testserver ausprobieren.
 * Kein Hochverfügbarkeits-Betrieb, kein verwalteter Datenbank-Cluster, keine automatischen Betriebssystem-Updates, keine Überwachung. Sicherungen liegen auf demselben Server – bitte zusätzlich extern sichern.
 * Das eingebettete PostgreSQL der lokalen Variante ist für Test und kleine Einsätze gedacht.

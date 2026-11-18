@@ -145,6 +145,7 @@ export async function askUbuntu(ui, given) {
     o.keyPath ??= await ui.ask("Pfad zur privaten Schlüsseldatei", { validate: (v) => (v ? null : "Pfad fehlt.") });
     o.passphrase ??= (await ui.confirm("Ist der Schlüssel mit einer Passphrase geschützt?", false)) ? await ui.secret("Passphrase") : undefined;
   }
+  if (o.sshUser !== "root" && !ui.interactive && o.sudoPassword === undefined && o.authMethod === "password") o.sudoPassword = o.sshPassword; // ohne Terminal: dasselbe Passwort annehmen
   if (o.sshUser !== "root") o.sudoPassword ??= o.authMethod === "password" ? (await ui.confirm(`Ist das sudo-Passwort dasselbe wie das SSH-Passwort?`, true) ? o.sshPassword : await ui.secret("sudo-Passwort")) : await ui.secret("sudo-Passwort (leer, wenn sudo ohne Passwort erlaubt ist)");
   o.mode ??= await ui.choose("Was soll geschehen?", [{ value: "install", label: "Neu installieren" }, { value: "update", label: "Bestehende Installation aktualisieren (Daten bleiben erhalten)" }]);
   if (o.domain === undefined) {
