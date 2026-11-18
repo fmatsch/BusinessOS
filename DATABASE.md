@@ -57,6 +57,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Finance (Belegerfassung und Export)**
 `Account`, `TaxCode`, `Customer`, `FinanceFile` (Belegdatei, Hash), `SupplierInvoice`/`Line`, `CustomerInvoice`/`Line`, `AccountingProfile`, `AccountingExport`/`Item`; `Supplier` um UID und Konten erweitert. Teilindex `SupplierInvoice_supplier_number_active` (keine Dubletten aktiver Rechnungen); Trigger machen Exportläufe und -positionen unveränderlich; ein Beleg steht höchstens einmal in einem Lauf (Unique org+Art+Beleg).
 
+**Wareneingang**
+`GoodsReceipt` (je Bestellung, `reversesId` für Gegenbuchungen, eindeutig) und `GoodsReceiptLine` (Bestellposition, Menge; Gegenbuchung negativ) – per Trigger append-only. `SupplierInvoice` um `varianceAcceptedById/At/Reason` erweitert.
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

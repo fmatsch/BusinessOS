@@ -279,8 +279,38 @@ model PurchaseOrder {
   status         String           @default("OPEN")
   createdAt      DateTime         @default(now())
 
+  receipts GoodsReceipt[]
+
   @@unique([organizationId, number])
   @@index([organizationId, costCenterId])
+}
+
+/// Wareneingang zu einer Bestellung (append-only; Korrektur = Gegenbuchung mit reversesId)
+model GoodsReceipt {
+  id             String             @id @default(cuid())
+  organizationId String
+  orderId        String
+  order          PurchaseOrder      @relation(fields: [orderId], references: [id])
+  receivedOn     DateTime           @db.Date
+  note           String?
+  reversesId     String?            @unique
+  createdById    String
+  createdAt      DateTime           @default(now())
+  lines          GoodsReceiptLine[]
+
+  @@index([organizationId, orderId])
+}
+
+model GoodsReceiptLine {
+  id            String       @id @default(cuid())
+  receiptId     String
+  receipt       GoodsReceipt @relation(fields: [receiptId], references: [id])
+  requestLineId String
+  /// Menge; in Gegenbuchungen negativ
+  quantity      Decimal      @db.Decimal(19, 4)
+
+  @@index([receiptId])
+  @@index([requestLineId])
 }
 
 model Budget {
@@ -914,33 +944,37 @@ model FinanceFile {
 }
 
 model SupplierInvoice {
-  id              String    @id @default(cuid())
-  organizationId  String
-  supplierId      String
-  supplier        Supplier  @relation(fields: [supplierId], references: [id])
+  id                   String    @id @default(cuid())
+  organizationId       String
+  supplierId           String
+  supplier             Supplier  @relation(fields: [supplierId], references: [id])
   /// Rechnungsnummer des Lieferanten (je Lieferant eindeutig, solange nicht storniert; Teil-Index in der Migration)
-  invoiceNumber   String
-  invoiceDate     DateTime  @db.Date
-  dueDate         DateTime? @db.Date
+  invoiceNumber        String
+  invoiceDate          DateTime  @db.Date
+  dueDate              DateTime? @db.Date
   /// INVOICE | CREDIT (Gutschrift; Beträge positiv, das Vorzeichen ergibt sich aus der Art)
-  kind            String    @default("INVOICE")
-  creditsId       String?
+  kind                 String    @default("INVOICE")
+  creditsId            String?
   /// DRAFT | APPROVED | CANCELLED
-  status          String    @default("DRAFT")
+  status               String    @default("DRAFT")
   /// interne Belegnummer, vergeben bei der Freigabe (ER-2027-0001)
-  voucherNumber   String?
-  currency        String    @default("EUR")
-  netTotal        Decimal   @db.Decimal(19, 4)
-  taxTotal        Decimal   @db.Decimal(19, 4)
-  grossTotal      Decimal   @db.Decimal(19, 4)
-  purchaseOrderId String?
-  fileId          String?
-  paidOn          DateTime? @db.Date
-  note            String?
-  createdById     String
-  approvedById    String?
-  approvedAt      DateTime?
-  createdAt       DateTime  @default(now())
+  voucherNumber        String?
+  currency             String    @default("EUR")
+  netTotal             Decimal   @db.Decimal(19, 4)
+  taxTotal             Decimal   @db.Decimal(19, 4)
+  grossTotal           Decimal   @db.Decimal(19, 4)
+  purchaseOrderId      String?
+  fileId               String?
+  paidOn               DateTime? @db.Date
+  note                 String?
+  createdById          String
+  approvedById         String?
+  approvedAt           DateTime?
+  /// Abweichung vom Abgleich mit Bestellung und Wareneingang wurde ausdrücklich akzeptiert
+  varianceAcceptedById String?
+  varianceAcceptedAt   DateTime?
+  varianceReason       String?
+  createdAt            DateTime  @default(now())
 
   lines SupplierInvoiceLine[]
 

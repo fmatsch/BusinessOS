@@ -122,9 +122,17 @@ Entscheidung: kein eigenes Hauptbuch; die Steuerberatung bucht. Detailplan: [FIN
 * ⚠️ **Beide Formate wurden nicht gegen echte BMD-/DATEV-Systeme getestet**, sondern nach den veröffentlichten Beschreibungen gebaut – vor Produktivbetrieb mit der Steuerberatung prüfen (u. a. Annahme zu Buchcode/Buchsymbol)
 * ⚠️ Kein PDF für ausgestellte Ausgangsrechnungen · keine Fremdwährung · keine Bankanbindung · keine Verknüpfung Rechnung ↔ Budget
 
+## M13 Wareneingang und Rechnungsabgleich
+Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
+
+* ✅ Wareneingang je Bestellposition (Teillieferungen, Korrektur per Gegenbuchung, append-only)
+* ✅ Drei-Wege-Abgleich bei der Rechnungsfreigabe (Toleranz 2 % / 5 €), Sperre und Akzeptieren mit Begründung (eigene Berechtigung, Vier-Augen)
+* ⚠️ Toleranz fest; Abgleich nur für Rechnungen mit Bestellbezug; Wertvergleich statt Mengenvergleich je Rechnungsposition
+* ⬜ Budget „Ist“ aus freigegebenen Rechnungen
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
 * ⬜ Kundenabrechnung nach Stunden (braucht Projekte und Finance)
-* ⬜ M13 Wareneingang und Rechnungsabgleich – Plan: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md) · M11 Projekte · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
+* ⬜ M11 Projekte · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

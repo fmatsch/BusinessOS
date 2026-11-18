@@ -33,3 +33,13 @@ export const orderInput = z.object({
   supplierId: z.string().min(1),
   costCenterId: z.string().min(1),
 });
+
+export const receiptInput = z.object({
+  orderId: z.string().min(1),
+  receivedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Datum im Format JJJJ-MM-TT"),
+  note: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : v), z.string().trim().max(200).nullish()),
+  lines: z
+    .array(z.object({ requestLineId: z.string().min(1), quantity: decimalString.refine((d) => d.gt(0), "Menge muss > 0 sein") }))
+    .min(1)
+    .max(100),
+});

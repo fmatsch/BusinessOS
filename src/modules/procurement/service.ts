@@ -4,7 +4,9 @@ import { authorize, can, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { budgetOf, committedOf, fiscalYearRange } from "@/modules/budget/queries";
-import { decisionInput, orderInput, requestInput, supplierInput } from "./schema";
+import { decisionInput, orderInput, receiptInput, requestInput, supplierInput } from "./schema";
+import { receivingOf } from "./queries";
+import { Decimal } from "@/lib/money";
 import { computeTotal } from "./rules";
 import { stepsFor } from "@/platform/approvals/engine";
 import { getActivePolicy, PURCHASE_REQUEST } from "@/platform/approvals/policy";
@@ -245,5 +247,71 @@ export async function createOrder(ctx: Ctx, raw: unknown) {
     });
     await emit(tx, ctx, "purchase_order.created", { orderId: order.id, costCenterId: costCenter.id });
     return { order, overBudget };
+  });
+}
+
+// ───────── Wareneingang ─────────
+
+/** Liefer- und Abrechnungsstand einer Bestellung (Lieferstatus je Position). */
+export async function getOrderReceiving(ctx: Ctx, orderId: string) {
+  authorize(ctx, "procurement.receipt.read");
+  const r = await receivingOf(db, ctx.organizationId, orderId);
+  if (!r) throw new NotFoundError("Bestellung");
+  const receipts = await db.goodsReceipt.findMany({ where: { organizationId: ctx.organizationId, orderId }, orderBy: { createdAt: "desc" }, include: { lines: true } });
+  const reversed = new Set(receipts.map((x) => x.reversesId).filter(Boolean) as string[]);
+  return { ...r, receipts: receipts.map((x) => ({ ...x, reversed: reversed.has(x.id), isReversal: !!x.reversesId })) };
+}
+
+/** Wareneingang buchen (append-only). Es kann nicht mehr als die offene Bestellmenge geliefert werden. */
+export async function recordReceipt(ctx: Ctx, raw: unknown) {
+  authorize(ctx, "procurement.receipt.create");
+  const input = receiptInput.parse(raw);
+  if (input.receivedOn > new Date().toISOString().slice(0, 10)) throw new ConflictError("Das Lieferdatum darf nicht in der Zukunft liegen");
+  return db.$transaction(async (tx) => {
+    const cur = await receivingOf(tx, ctx.organizationId, input.orderId);
+    if (!cur) throw new NotFoundError("Bestellung");
+    if (cur.order.status === "CANCELLED") throw new ConflictError("Die Bestellung ist storniert");
+    // Zeilensperre: parallele Wareneingänge zur selben Bestellung dürfen die Bestellmenge nicht gemeinsam überschreiten
+    await tx.$queryRaw`SELECT id FROM "PurchaseOrder" WHERE id = ${cur.order.id} FOR UPDATE`;
+    const fresh = (await receivingOf(tx, ctx.organizationId, input.orderId))!;
+    const byLine = new Map(fresh.lines.map((l) => [l.id, l]));
+    const seen = new Set<string>();
+    for (const l of input.lines) {
+      const line = byLine.get(l.requestLineId);
+      if (!line) throw new NotFoundError("Bestellposition");
+      if (seen.has(l.requestLineId)) throw new ConflictError("Jede Position nur einmal je Wareneingang");
+      seen.add(l.requestLineId);
+      if (new Decimal(l.quantity.toString()).gt(line.open)) throw new ConflictError(`„${line.description}“: Es sind nur noch ${line.open.toString()} offen`);
+    }
+    const receipt = await tx.goodsReceipt.create({
+      data: {
+        organizationId: ctx.organizationId, orderId: fresh.order.id, receivedOn: new Date(`${input.receivedOn}T00:00:00Z`), note: input.note ?? null, createdById: ctx.userId,
+        lines: { create: input.lines.map((l) => ({ requestLineId: l.requestLineId, quantity: l.quantity.toString() })) },
+      },
+    });
+    await writeAudit(tx, ctx, { action: "goods_receipt.create", entityType: "GoodsReceipt", entityId: receipt.id, after: { orderId: fresh.order.id, lines: input.lines.length } });
+    await emit(tx, ctx, "goods_receipt.recorded", { receiptId: receipt.id, orderId: fresh.order.id });
+    return receipt;
+  });
+}
+
+/** Korrektur eines Wareneingangs als Gegenbuchung (negative Mengen). Ein Wareneingang kann nur einmal korrigiert werden. */
+export async function reverseReceipt(ctx: Ctx, receiptId: string, reason: string) {
+  authorize(ctx, "procurement.receipt.create");
+  const why = reason.trim();
+  if (why.length < 3) throw new ConflictError("Bitte einen Grund angeben");
+  return db.$transaction(async (tx) => {
+    const orig = await tx.goodsReceipt.findFirst({ where: { id: receiptId, organizationId: ctx.organizationId }, include: { lines: true } });
+    if (!orig) throw new NotFoundError("Wareneingang");
+    if (orig.reversesId) throw new ConflictError("Eine Gegenbuchung kann nicht erneut korrigiert werden");
+    if (await tx.goodsReceipt.findFirst({ where: { reversesId: orig.id }, select: { id: true } })) throw new ConflictError("Dieser Wareneingang wurde bereits korrigiert");
+    const rev = await tx.goodsReceipt.create({
+      data: {
+        organizationId: ctx.organizationId, orderId: orig.orderId, receivedOn: new Date(), note: `Korrektur: ${why}`.slice(0, 200), reversesId: orig.id, createdById: ctx.userId,
+        lines: { create: orig.lines.map((l) => ({ requestLineId: l.requestLineId, quantity: new Decimal(l.quantity.toString()).neg().toString() })) },
+      },
+    });
+    await writeAudit(tx, ctx, { action: "goods_receipt.reverse", entityType: "GoodsReceipt", entityId: rev.id, before: { reverses: orig.id }, after: { reason: why } });
+    return rev;
   });
 }

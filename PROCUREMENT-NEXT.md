@@ -1,33 +1,20 @@
-# Plan: Wareneingang und Rechnungsabgleich (M13)
+# Wareneingang und Rechnungsabgleich (M13)
 
-Status: **Plan, noch nicht umgesetzt.** Ziel: Eingangsrechnungen gegen Bestellung und tatsächlich gelieferte Menge prüfen (Drei-Wege-Abgleich), bevor sie zur Freigabe gehen.
+Status: **umgesetzt** (Schritte 1–4 des ursprünglichen Plans); Schritt 5 (Budget „Ist“ aus Rechnungen) ist offen.
 
-## Nutzen
-* Rechnungen werden nur freigegeben, wenn Menge und Preis zur Bestellung und zum Wareneingang passen (oder eine Abweichung begründet akzeptiert wird).
-* Bestellungen zeigen Lieferstatus (offen / teilgeliefert / vollständig) und den bereits abgerechneten Betrag.
-* Budget: Bindung aus Bestellung wird durch den tatsächlich gebuchten Rechnungsbetrag ersetzt (Ist statt Plan).
+## Was es tut
+* **Wareneingang** je Bestellung und Bestellposition (Teillieferungen möglich); Lieferstatus „nichts geliefert / teilgeliefert / vollständig“.
+* **Drei-Wege-Abgleich** beim Freigeben einer Eingangsrechnung **mit Bestellbezug**: Die Netto-Rechnung darf den Wert der gelieferten, noch nicht abgerechneten Ware und den offenen Bestellwert nicht übersteigen. Toleranz: die größere von **2 % der Rechnungssumme oder 5 €** (feste Voreinstellung, `DEFAULT_TOLERANCE` in `modules/finance/match.ts`).
+* Bei Abweichung ist die **Freigabe gesperrt**, bis eine Person mit `finance.invoice.in.accept_variance` die Abweichung mit Begründung akzeptiert (nicht die erfassende Person; im Audit-Log).
+* Rechnungen **ohne Bestellung** (z. B. Miete) und Gutschriften werden nicht abgeglichen.
 
-## Datenmodell (neu)
-* `GoodsReceipt` (Wareneingang: Bestellung, Datum, Erfasser, Notiz) und `GoodsReceiptLine` (Bestellposition, Menge) – **append-only**; Korrekturen als Gegenbuchung (negative Menge) statt Änderung.
-* `PurchaseOrderLine` bekommt abgeleitete Summen (geliefert, abgerechnet) – berechnet, nicht gespeichert.
-* `SupplierInvoice.purchaseOrderId` existiert bereits; neu: `SupplierInvoiceLine.purchaseOrderLineId` (optional).
-* `MatchResult` je Rechnung: Status (OK / ABWEICHUNG / AKZEPTIERT), Abweichungen als Liste, Toleranz aus Organisationseinstellung (Prozent und Betrag), wer hat akzeptiert und warum.
+## Umsetzung (abweichend vom ersten Plan)
+* `GoodsReceipt`/`GoodsReceiptLine`: append-only (DB-Trigger); Korrektur nur als Gegenbuchung (`reversesId`, höchstens einmal je Wareneingang). Mengen beziehen sich auf die Positionen der Bestellanforderung (Bestellungen haben keine eigenen Positionen).
+* Kein Abgleich je Rechnungsposition: Rechnungspositionen tragen keine Menge, daher wird der **Wert** (Menge × Bestellpreis) verglichen.
+* Überlieferung ist nicht möglich (Menge ≤ offene Bestellmenge); parallele Buchungen sind per Zeilensperre auf der Bestellung abgesichert. Ebenso sperrt die Rechnungsfreigabe die Bestellung, damit parallele Freigaben den Abgleich nicht umgehen.
+* Berechtigungen: `procurement.receipt.create`/`.read` (Führungskraft, Finanzen, Inhaber), `finance.invoice.in.accept_variance` (Finanzen, Inhaber). **Bestehende Organisationen** brauchen die neuen Berechtigungen in ihren Rollen (`npx prisma db seed` für die Demo; produktiv per Rollen-Sync).
 
-## Regeln
-1. Wareneingang nur für freigegebene, bestellte Positionen; Menge darf bestellte Restmenge nicht überschreiten (Übermenge nur mit Berechtigung und Begründung).
-2. Abgleich je Rechnungsposition: Menge ≤ geliefert − bereits abgerechnet; Preis innerhalb Toleranz. Ergebnis wird beim Erfassen und bei Wareneingängen neu berechnet.
-3. Abweichung blockiert die Freigabe, bis jemand mit Berechtigung `finance.invoice.in.accept_variance` mit Begründung akzeptiert (Vier-Augen bleibt bestehen).
-4. Alles in `prisma.$transaction` mit AuditLog + OutboxEvent; Mandantenfilter und `authorize` wie üblich; Geld nur `Decimal`.
-5. Neue Berechtigungen: `procurement.receipt.create`, `procurement.receipt.read`, `finance.invoice.in.accept_variance`.
-
-## Umsetzung in Schritten
-1. Schema + Migration + Berechtigungen, Abgleichslogik als **reine, getestete Funktion** (`modules/finance/match.ts`).
-2. Service: Wareneingang erfassen/lesen/stornieren, Lieferstatus, Abgleich bei Rechnungserfassung.
-3. UI: Wareneingang an der Bestellung, Abgleichsanzeige an der Eingangsrechnung, Abweichung akzeptieren.
-4. Tests: Unit (Toleranzen, Teillieferung, Gutschrift), DB-Fluss, Berechtigungsmatrix, Mandantentrennung, E2E.
-5. Budget „Ist“ aus freigegebenen Rechnungen (eigener Schritt, ändert Budgetanzeige).
-
-## Offene Fragen an Sie
-* Toleranz: feste Voreinstellung (z. B. 2 % / 5 €) oder je Lieferant?
-* Soll der Abgleich Pflicht sein oder nur Hinweis?
-* Rechnungen ohne Bestellung (z. B. Miete): weiterhin ohne Abgleich erlaubt?
+## Grenzen
+* Toleranz ist noch nicht je Organisation oder Lieferant einstellbar; der Abgleich ist Pflicht (nur mit Bestellbezug).
+* Eine Korrektur des Wareneingangs nach einer bereits freigegebenen Rechnung ändert diese nicht; der Stand wird beim nächsten Abgleich zur Bestellung berücksichtigt.
+* Kein Wareneingang für Bestellungen ohne Anforderungspositionen, keine Lieferscheine/Seriennummern, keine Lagerführung.

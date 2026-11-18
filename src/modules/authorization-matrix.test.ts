@@ -6,11 +6,11 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
-import { approveSupplierInvoice, cancelCustomerInvoiceDraft, createAccount, createCustomer, createCustomerInvoice, createSupplierInvoice, createTaxCode, financeOverview, getAccountingProfile, getCustomerInvoice, getFile, getSupplierInvoice, importAccounts, issueCustomerInvoice, listAccounts, listCustomerInvoices, listCustomers, listSupplierInvoices, listTaxCodes, markSupplierInvoicePaid, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, updateTaxMapping, uploadFile } from "./finance/service";
+import { acceptInvoiceVariance, getInvoiceMatch, approveSupplierInvoice, cancelCustomerInvoiceDraft, createAccount, createCustomer, createCustomerInvoice, createSupplierInvoice, createTaxCode, financeOverview, getAccountingProfile, getCustomerInvoice, getFile, getSupplierInvoice, importAccounts, issueCustomerInvoice, listAccounts, listCustomerInvoices, listCustomers, listSupplierInvoices, listTaxCodes, markSupplierInvoicePaid, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, updateTaxMapping, uploadFile } from "./finance/service";
 import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./finance/export";
 import { budgetOverview, committedByDepartment, setBudget } from "./budget/service";
 import { createCostCenter, createDepartment, listCostCenters, listDepartments } from "./masterdata/service";
-import { createOrder, createRequest, createSupplier, getRequest, listOrders, listRequests, listSuppliers } from "./procurement/service";
+import { createOrder, createRequest, createSupplier, getOrderReceiving, getRequest, listOrders, listRequests, listSuppliers, recordReceipt, reverseReceipt } from "./procurement/service";
 
 const none: Ctx = { userId: "u", organizationId: "o", permissions: new Set<Permission>() };
 const valid = {
@@ -115,6 +115,11 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["listAccountingExports", "finance.export.read", () => listAccountingExports(none)],
   ["getAccountingExportFile", "finance.export.read", () => getAccountingExportFile(none, "x", "data")],
   ["createAccountingExport", "finance.export.create", () => createAccountingExport(none, {})],
+  ["getOrderReceiving", "procurement.receipt.read", () => getOrderReceiving(none, "x")],
+  ["recordReceipt", "procurement.receipt.create", () => recordReceipt(none, { orderId: "x", receivedOn: "2026-01-05", lines: [{ requestLineId: "y", quantity: "1" }] })],
+  ["reverseReceipt", "procurement.receipt.create", () => reverseReceipt(none, "x", "Grund")],
+  ["getInvoiceMatch", "finance.invoice.read", () => getInvoiceMatch(none, "x")],
+  ["acceptInvoiceVariance", "finance.invoice.in.accept_variance", () => acceptInvoiceVariance(none, "x", "Begründung")],
   ["publishPolicy", "org.settings.manage", () => publishPolicy(none, [])],
   ["readPolicy", "org.settings.manage", () => readPolicy(none)],
 ];

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireContext } from "@/platform/tenancy/context";
 import { can } from "@/platform/authz/authorize";
 import { listCostCenters } from "@/modules/masterdata/service";
-import { listSuppliers } from "@/modules/procurement/service";
+import { listOrders, listSuppliers } from "@/modules/procurement/service";
 import { createSupplierInvoice, listAccounts, listSupplierInvoices, listTaxCodes, uploadFile } from "@/modules/finance/service";
 import { formatMoney } from "@/lib/money";
 import { ErrorBanner, runAction } from "../../action-helpers";
@@ -26,7 +26,7 @@ async function create(fd: FormData) {
   })).filter((l) => l.description !== "" || l.netAmount !== "");
   const inv = await runAction("/finance/in", () => createSupplierInvoice(ctx, {
     supplierId: fd.get("supplierId"), invoiceNumber: fd.get("invoiceNumber"), invoiceDate: fd.get("invoiceDate"), dueDate: fd.get("dueDate"),
-    kind: fd.get("kind") || "INVOICE", creditsId: fd.get("creditsId") || null, fileId, note: fd.get("note"), lines,
+    kind: fd.get("kind") || "INVOICE", creditsId: fd.get("creditsId") || null, purchaseOrderId: fd.get("purchaseOrderId") || null, fileId, note: fd.get("note"), lines,
   }));
   redirect(`/finance/in/${inv.id}`);
 }
@@ -36,12 +36,13 @@ export default async function SupplierInvoices({ searchParams }: { searchParams:
   const ctx = await requireContext();
   if (!can(ctx, "finance.invoice.read")) return <p>Dafür fehlt Ihnen die Berechtigung.</p>;
   const creator = can(ctx, "finance.invoice.in.create");
-  const [invoices, suppliers, taxCodes, accounts, costCenters] = await Promise.all([
+  const [invoices, suppliers, taxCodes, accounts, costCenters, orders] = await Promise.all([
     listSupplierInvoices(ctx),
     creator ? listSuppliers(ctx) : Promise.resolve([]),
     creator ? listTaxCodes(ctx) : Promise.resolve([]),
     creator ? listAccounts(ctx) : Promise.resolve([]),
     creator && can(ctx, "master.costcenter.read") ? listCostCenters(ctx) : Promise.resolve([]),
+    creator && can(ctx, "procurement.order.create") ? listOrders(ctx) : Promise.resolve([]),
   ]);
   const input = "mt-1 block w-full rounded-md border border-line bg-bg px-2 py-1";
   const gl = accounts.filter((a) => a.type === "GL" && a.active);
@@ -61,6 +62,7 @@ export default async function SupplierInvoices({ searchParams }: { searchParams:
             <label>Rechnungsdatum<input type="date" name="invoiceDate" required className={input} /></label>
             <label>Fällig am<input type="date" name="dueDate" className={input} /></label>
             <label>Art<select name="kind" className={input}><option value="INVOICE">Rechnung</option><option value="CREDIT">Gutschrift</option></select></label>
+            <label>Bestellung (optional, für den Abgleich)<select name="purchaseOrderId" className={input}><option value="">–</option>{orders.filter((o) => o.status !== "CANCELLED").map((o) => <option key={o.id} value={o.id}>{o.number} · {o.supplier.name}</option>)}</select></label>
             <label>Bezug (nur Gutschrift)<select name="creditsId" className={input}><option value="">–</option>{approved.map((i) => <option key={i.id} value={i.id}>{i.supplier.name} {i.invoiceNumber}</option>)}</select></label>
             <label className="sm:col-span-2">Belegdatei (PDF, PNG, JPEG, max. 8 MB)<input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" className={input} /></label>
           </div>

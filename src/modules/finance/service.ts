@@ -5,7 +5,9 @@ import { authorize, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { dateFromIso, isoFromDate, addDays } from "@/modules/hr/queries";
+import { receivingOf } from "@/modules/procurement/queries";
 import { allocateTax } from "./tax";
+import { matchInvoice } from "./match";
 import { sha256Hex } from "./formats/encoding";
 import {
   accountInput, customerInput, customerInvoiceInput, paidInput, partnerAccountsInput, profileInput, supplierInvoiceInput, taxCodeInput,
@@ -240,6 +242,45 @@ export async function createSupplierInvoice(ctx: Ctx, raw: unknown) {
   });
 }
 
+
+/** Drei-Wege-Abgleich einer Eingangsrechnung mit Bestellung und Wareneingang. Nur Rechnungen mit Bestellbezug werden abgeglichen; Gutschriften nicht. */
+async function computeMatch(tx: Tx, organizationId: string, inv: { id: string; kind: string; purchaseOrderId: string | null; netTotal: Prisma.Decimal }) {
+  if (!inv.purchaseOrderId || inv.kind !== "INVOICE") return { applicable: false as const };
+  const rec = await receivingOf(tx, organizationId, inv.purchaseOrderId);
+  if (!rec) throw new NotFoundError("Bestellung");
+  const approved = await tx.supplierInvoice.findMany({ where: { organizationId, status: "APPROVED", id: { not: inv.id }, OR: [{ purchaseOrderId: inv.purchaseOrderId }] }, select: { id: true, kind: true, netTotal: true } });
+  const invoiceIds = approved.filter((a) => a.kind === "INVOICE").map((a) => a.id);
+  const credits = await tx.supplierInvoice.findMany({ where: { organizationId, status: "APPROVED", kind: "CREDIT", creditsId: { in: invoiceIds } }, select: { netTotal: true } });
+  const already = approved.filter((a) => a.kind === "INVOICE").reduce((a, x) => a.plus(x.netTotal.toString()), d(0)).minus(credits.reduce((a, x) => a.plus(x.netTotal.toString()), d(0)));
+  const result = matchInvoice({ orderedNet: rec.orderedNet, receivedNet: rec.receivedNet, alreadyInvoicedNet: already, invoiceNet: inv.netTotal.toString() });
+  return { applicable: true as const, ...result, orderedNet: rec.orderedNet, receivedNet: rec.receivedNet, alreadyInvoicedNet: already, deliveryStatus: rec.status, orderNumber: rec.order.number };
+}
+
+export async function getInvoiceMatch(ctx: Ctx, id: string) {
+  authorize(ctx, "finance.invoice.read");
+  const inv = await db.supplierInvoice.findFirst({ where: { id, organizationId: ctx.organizationId } });
+  if (!inv) throw new NotFoundError("Eingangsrechnung");
+  return computeMatch(db as unknown as Tx, ctx.organizationId, inv);
+}
+
+/** Abweichung vom Abgleich ausdrücklich akzeptieren (eigene Berechtigung, Begründung, nicht durch die erfassende Person). */
+export async function acceptInvoiceVariance(ctx: Ctx, id: string, reason: string) {
+  authorize(ctx, "finance.invoice.in.accept_variance");
+  const why = reason.trim();
+  if (why.length < 5) throw new ConflictError("Bitte eine Begründung (mind. 5 Zeichen) angeben");
+  return db.$transaction(async (tx) => {
+    const inv = await tx.supplierInvoice.findFirst({ where: { id, organizationId: ctx.organizationId } });
+    if (!inv) throw new NotFoundError("Eingangsrechnung");
+    if (inv.status !== "DRAFT") throw new ConflictError("Nur Entwürfe können akzeptiert werden");
+    if (inv.createdById === ctx.userId) throw new ConflictError("Eigene Erfassungen dürfen nicht selbst akzeptiert werden (Vier-Augen-Prinzip)");
+    if (inv.varianceAcceptedAt) throw new ConflictError("Die Abweichung wurde bereits akzeptiert");
+    const m = await computeMatch(tx, ctx.organizationId, inv);
+    if (!m.applicable || m.status !== "VARIANCE") throw new ConflictError("Es gibt keine Abweichung, die akzeptiert werden müsste");
+    await tx.supplierInvoice.update({ where: { id }, data: { varianceAcceptedById: ctx.userId, varianceAcceptedAt: new Date(), varianceReason: why } });
+    await writeAudit(tx, ctx, { action: "supplier_invoice.accept_variance", entityType: "SupplierInvoice", entityId: id, after: { reason: why, variances: m.variances.map((v) => ({ code: v.code, excess: v.excess.toString() })) } });
+  });
+}
+
 /** Freigabe nach dem Vier-Augen-Prinzip: nicht durch die Person, die den Beleg erfasst hat. Vergibt die interne Belegnummer. */
 export async function approveSupplierInvoice(ctx: Ctx, id: string) {
   authorize(ctx, "finance.invoice.in.approve");
@@ -249,6 +290,13 @@ export async function approveSupplierInvoice(ctx: Ctx, id: string) {
     if (inv.status !== "DRAFT") throw new ConflictError("Nur Entwürfe können freigegeben werden");
     if (inv.createdById === ctx.userId) throw new ConflictError("Eigene Erfassungen dürfen nicht selbst freigegeben werden (Vier-Augen-Prinzip)");
     if (!inv.supplier.payableAccountId) throw new ConflictError("Für den Lieferanten ist kein Kreditorenkonto hinterlegt");
+    if (inv.purchaseOrderId) {
+      // parallele Freigaben zur selben Bestellung dürfen den Abgleich nicht gemeinsam umgehen
+      await tx.$queryRaw`SELECT id FROM "PurchaseOrder" WHERE id = ${inv.purchaseOrderId} FOR UPDATE`;
+      const m = await computeMatch(tx, ctx.organizationId, inv);
+      if (m.applicable && m.status === "VARIANCE" && !inv.varianceAcceptedAt)
+        throw new ConflictError(`Abgleich mit Bestellung und Wareneingang: ${m.variances.map((v) => v.message).join(" ")} Die Abweichung muss zuerst mit Begründung akzeptiert werden.`);
+    }
     if (inv.lines.some((l) => !l.expenseAccountId)) throw new ConflictError("Nicht jede Position hat ein Aufwandskonto");
     const claimed = await tx.supplierInvoice.updateMany({ where: { id, status: "DRAFT" }, data: { status: "APPROVED", approvedById: ctx.userId, approvedAt: new Date(), voucherNumber: await nextNumber(tx, ctx.organizationId, "ER", inv.invoiceDate.getUTCFullYear()) } });
     if (claimed.count !== 1) throw new ConflictError("Der Beleg wurde bereits bearbeitet");

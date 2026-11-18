@@ -3,13 +3,14 @@ import { revalidatePath } from "next/cache";
 import { requireContext } from "@/platform/tenancy/context";
 import { can, ForbiddenError } from "@/platform/authz/authorize";
 import { NotFoundError } from "@/platform/errors";
-import { approveSupplierInvoice, cancelSupplierInvoice, getSupplierInvoice, markSupplierInvoicePaid } from "@/modules/finance/service";
+import { acceptInvoiceVariance, approveSupplierInvoice, cancelSupplierInvoice, getInvoiceMatch, getSupplierInvoice, markSupplierInvoicePaid } from "@/modules/finance/service";
 import { formatMoney } from "@/lib/money";
 import { ErrorBanner, runAction } from "../../../action-helpers";
 
 export const dynamic = "force-dynamic";
 
 async function approve(fd: FormData) { "use server"; const ctx = await requireContext(); const id = String(fd.get("id")); await runAction(`/finance/in/${id}`, () => approveSupplierInvoice(ctx, id)); revalidatePath("/finance", "layout"); }
+async function accept(fd: FormData) { "use server"; const ctx = await requireContext(); const id = String(fd.get("id")); await runAction(`/finance/in/${id}`, () => acceptInvoiceVariance(ctx, id, String(fd.get("reason") ?? ""))); revalidatePath("/finance", "layout"); }
 async function cancel(fd: FormData) { "use server"; const ctx = await requireContext(); const id = String(fd.get("id")); await runAction(`/finance/in/${id}`, () => cancelSupplierInvoice(ctx, id)); revalidatePath("/finance", "layout"); }
 async function paid(fd: FormData) { "use server"; const ctx = await requireContext(); const id = String(fd.get("id")); await runAction(`/finance/in/${id}`, () => markSupplierInvoicePaid(ctx, { id, paidOn: fd.get("paidOn") })); revalidatePath("/finance", "layout"); }
 
@@ -25,6 +26,7 @@ export default async function SupplierInvoicePage({ params, searchParams }: { pa
     throw e;
   }
   const t = new Map(inv.taxCodes.map((x) => [x.id, x])), a = new Map(inv.accounts.map((x) => [x.id, x]));
+  const match = await getInvoiceMatch(ctx, id);
   const secondary = "rounded-md border border-line px-3 py-1.5";
 
   return (
@@ -43,6 +45,23 @@ export default async function SupplierInvoicePage({ params, searchParams }: { pa
       </table>
       {inv.fileId && can(ctx, "finance.invoice.read") && <p className="text-sm"><a className="text-accent underline" href={`/finance/files/${inv.fileId}`}>Belegdatei ansehen</a></p>}
 
+      {match.applicable && (
+        <section className="space-y-2 rounded-xl border border-line bg-surface p-4 text-sm" aria-label="Abgleich">
+          <h2 className="font-medium">Abgleich mit Bestellung {match.orderNumber} und Wareneingang</h2>
+          <p className="text-muted">Bestellwert {formatMoney(match.orderedNet.toString(), inv.currency)} · geliefert {formatMoney(match.receivedNet.toString(), inv.currency)} · bereits abgerechnet {formatMoney(match.alreadyInvoicedNet.toString(), inv.currency)} (netto)</p>
+          {match.status === "OK" ? <p><strong>Abgleich in Ordnung.</strong> Die Rechnung liegt innerhalb der Toleranz.</p> : (
+            <>
+              <ul className="list-disc pl-5 text-red-700 dark:text-red-400">{match.variances.map((v) => <li key={v.code}>{v.message}</li>)}</ul>
+              {inv.varianceAcceptedAt ? <p><strong>Abweichung akzeptiert:</strong> {inv.varianceReason}</p>
+                : inv.status === "DRAFT" && can(ctx, "finance.invoice.in.accept_variance") && inv.createdById !== ctx.userId ? (
+                  <form action={accept} className="flex flex-wrap items-end gap-2"><input type="hidden" name="id" value={inv.id} />
+                    <label>Begründung<input name="reason" required minLength={5} maxLength={300} className="mt-1 block rounded-md border border-line bg-bg px-2 py-1" /></label>
+                    <button className="rounded-md border border-line px-3 py-1.5">Abweichung akzeptieren</button></form>
+                ) : inv.status === "DRAFT" ? <p className="text-muted">Die Freigabe ist gesperrt, bis die Abweichung von einer berechtigten, nicht erfassenden Person akzeptiert wurde.</p> : null}
+            </>
+          )}
+        </section>
+      )}
       <div className="flex flex-wrap items-end gap-3 text-sm">
         {inv.status === "DRAFT" && can(ctx, "finance.invoice.in.approve") && (
           <form action={approve}><input type="hidden" name="id" value={inv.id} /><button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Freigeben</button></form>

@@ -5,7 +5,7 @@ import { requireContext } from "@/platform/tenancy/context";
 import { can } from "@/platform/authz/authorize";
 import { NotFoundError } from "@/platform/errors";
 import { listCostCenters } from "@/modules/masterdata/service";
-import { createOrder, decideRequest, getRequest, listSuppliers } from "@/modules/procurement/service";
+import { createOrder, decideRequest, getOrderReceiving, getRequest, listSuppliers, recordReceipt, reverseReceipt } from "@/modules/procurement/service";
 import type { Permission } from "@/platform/authz/permissions";
 import { formatMoney } from "@/lib/money";
 import { ErrorBanner, runAction } from "../../action-helpers";
@@ -39,6 +39,25 @@ async function order(formData: FormData) {
   redirect(`/procurement/${id}${result.overBudget ? "?error=" + encodeURIComponent("Bestellung angelegt – Budget der Kostenstelle ist damit überschritten.") : ""}`);
 }
 
+async function receive(formData: FormData) {
+  "use server";
+  const ctx = await requireContext();
+  const id = String(formData.get("requestId")), orderId = String(formData.get("orderId"));
+  const lines = [...formData.entries()].filter(([k, v]) => k.startsWith("qty_") && String(v).trim() !== "" && Number(String(v).replace(",", ".")) !== 0).map(([k, v]) => ({ requestLineId: k.slice(4), quantity: String(v).replace(",", ".") }));
+  await runAction(`/procurement/${id}`, () => recordReceipt(ctx, { orderId, receivedOn: formData.get("receivedOn"), note: formData.get("note"), lines }));
+  redirect(`/procurement/${id}`);
+}
+
+async function reverse(formData: FormData) {
+  "use server";
+  const ctx = await requireContext();
+  const id = String(formData.get("requestId"));
+  await runAction(`/procurement/${id}`, () => reverseReceipt(ctx, String(formData.get("receiptId")), String(formData.get("reason") ?? "")));
+  redirect(`/procurement/${id}`);
+}
+
+const DELIVERY: Record<string, string> = { NOT_RECEIVED: "nichts geliefert", PARTIAL: "teilgeliefert", COMPLETE: "vollständig geliefert" };
+
 export default async function RequestDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const [{ id }, { error }] = await Promise.all([params, searchParams]);
   const ctx = await requireContext();
@@ -53,6 +72,8 @@ export default async function RequestDetail({ params, searchParams }: { params: 
     ? await Promise.all([listSuppliers(ctx), listCostCenters(ctx)])
     : [[], []];
   const input = "mt-1 block rounded-md border border-line bg-bg px-2 py-1";
+  const today = new Date().toISOString().slice(0, 10);
+  const receiving = can(ctx, "procurement.receipt.read") ? await Promise.all(r.orders.map((o) => getOrderReceiving(ctx, o.id))) : [];
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -120,6 +141,40 @@ export default async function RequestDetail({ params, searchParams }: { params: 
           <ul className="text-sm">{r.orders.map((o) => <li key={o.id}>{o.number} · {o.supplier.name} · Kostenstelle {o.costCenter.code} · {formatMoney(o.totalAmount.toString(), o.currency)}</li>)}</ul>
         </section>
       )}
+
+      {receiving.map((rc) => (
+        <section key={rc.order.id} className="space-y-3 rounded-xl border border-line bg-surface p-4 text-sm" aria-label={`Wareneingang ${rc.order.number}`}>
+          <h2 className="font-medium">Wareneingang {rc.order.number} · {DELIVERY[rc.status]}</h2>
+          <table className="w-full text-left">
+            <thead className="text-muted"><tr><th className="py-1">Position</th><th className="text-right">bestellt</th><th className="text-right">geliefert</th><th className="text-right">offen</th></tr></thead>
+            <tbody className="divide-y divide-line">{rc.lines.map((l) => <tr key={l.id}><td className="py-1">{l.description}</td><td className="text-right">{l.ordered.toString()}</td><td className="text-right">{l.received.toString()}</td><td className="text-right">{l.open.toString()}</td></tr>)}</tbody>
+          </table>
+          {can(ctx, "procurement.receipt.create") && rc.status !== "COMPLETE" && (
+            <form action={receive} className="space-y-2">
+              <input type="hidden" name="requestId" value={r.id} /><input type="hidden" name="orderId" value={rc.order.id} />
+              <div className="flex flex-wrap gap-3">
+                <label>Geliefert am<input type="date" name="receivedOn" defaultValue={today} max={today} required className={input} /></label>
+                <label>Notiz<input name="note" maxLength={200} className={input} /></label>
+              </div>
+              <div className="flex flex-wrap gap-3">{rc.lines.filter((l) => l.open.gt(0)).map((l) => (
+                <label key={l.id}>Menge: {l.description}<input name={`qty_${l.id}`} inputMode="decimal" placeholder={`bis ${l.open.toString()}`} className={input + " w-32"} /></label>
+              ))}</div>
+              <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Wareneingang buchen</button>
+            </form>
+          )}
+          {rc.receipts.length > 0 && (
+            <ul className="space-y-1">{rc.receipts.map((x) => (
+              <li key={x.id} className="flex flex-wrap items-center gap-2">
+                <span>{x.receivedOn.toISOString().slice(0, 10)} · {x.lines.map((l) => l.quantity.toString()).join(" / ")} Stück{x.note ? ` · ${x.note}` : ""}{x.isReversal ? " (Gegenbuchung)" : ""}{x.reversed ? " (korrigiert)" : ""}</span>
+                {!x.isReversal && !x.reversed && can(ctx, "procurement.receipt.create") && (
+                  <form action={reverse} className="flex items-center gap-1"><input type="hidden" name="requestId" value={r.id} /><input type="hidden" name="receiptId" value={x.id} />
+                    <input name="reason" required minLength={3} placeholder="Grund" aria-label="Grund der Korrektur" className="rounded-md border border-line bg-bg px-2 py-0.5" />
+                    <button className="rounded-md border border-line px-2 py-0.5">Korrigieren</button></form>
+                )}
+              </li>))}</ul>
+          )}
+        </section>
+      ))}
     </div>
   );
 }
