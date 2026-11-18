@@ -4,7 +4,7 @@ Modulare, KI-native ERP-Plattform (Modular Monolith) mit Mandantenfähigkeit, RB
 Sprache der Oberfläche: Deutsch (Standard) und Englisch.
 
 > **Status: Phase 4 (KI-Copilot, lesend).** Funktional sind Authentifizierung, Organisationen/Mandanten, Rollen & Rechte,
-> App-Rahmen, Abteilungen, Kostenstellen, Lieferanten, Bestellanforderung mit Freigabe, Bestellung, Budget-Bindung, Benachrichtigungen, HR-Basis (Mitarbeiter, Beschäftigung, Urlaub, Abwesenheiten), Dienstplanung (Schichten, Regelprüfung, Versionen, Tausch, iCal), Audit-Log und ein lesender KI-Copilot (benötigt `ANTHROPIC_API_KEY`). Alle anderen Module erscheinen in der Navigation als *geplant* und täuschen keine Funktion vor.
+> App-Rahmen, Abteilungen, Kostenstellen, Lieferanten, Bestellanforderung mit Freigabe, Bestellung, Budget-Bindung, Benachrichtigungen, HR-Basis (Mitarbeiter, Beschäftigung, Urlaub, Abwesenheiten), Dienstplanung (Schichten, Regelprüfung, Versionen, Tausch, iCal), Zeiterfassung (Stempeluhr, Korrekturen mit Freigabe, Monatsabschluss, Zeitkonto), Audit-Log und ein lesender KI-Copilot (benötigt `ANTHROPIC_API_KEY`). Alle anderen Module erscheinen in der Navigation als *geplant* und täuschen keine Funktion vor.
 > Siehe [ROADMAP.md](ROADMAP.md).
 
 ## Dokumentation

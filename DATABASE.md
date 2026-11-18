@@ -44,6 +44,12 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 * `RosterVersion`: unveränderlicher Snapshot + Änderungsprotokoll (Trigger verbietet UPDATE/DELETE); `PublishedShift`: Projektion der jüngsten Version je Person (für „Mein Dienstplan", iCal)
 * `ShiftSwapRequest` (PENDING_PEER → PENDING_APPROVAL → APPROVED/REJECTED/CANCELLED)
 
+**Zeiterfassung (M9)**
+* `TimeClock` (laufende Stempelung, flüchtig) → `TimeEntry`: **Journal** (`kind` WORK | REVERSAL, `reversesId` eindeutig, `replacesId` bei Korrektur; Trigger verbietet UPDATE/DELETE); wirksam = WORK ohne Gegenbuchung
+* `TimeEntryRequest` (ADD | CORRECT | DELETE mit Begründung und Freigabe), `TimesheetPeriod` (OPEN → SUBMITTED → APPROVED, `summary` zum Freigabezeitpunkt)
+* `TimeAccountEntry`: Zeitkonto-Journal in Minuten (PERIOD | REVERSAL | ADJUSTMENT), append-only; Saldo = Summe
+* `PayCodeRule`: Zuschlagsprozente je Kategorie (Konfiguration für M10)
+
 **Weitere (Schema vorbereitet, Funktion später)**
 `Account`, `JournalEntry`, `JournalLine`, `Invoice`, `Payment`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

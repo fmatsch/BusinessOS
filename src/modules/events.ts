@@ -2,10 +2,11 @@ import { dispatchOutbox, type DispatchOptions, type HandlerMap } from "@/platfor
 import { hrHandlers } from "./hr/handlers";
 import { procurementHandlers } from "./procurement/handlers";
 import { rosterHandlers } from "./roster/handlers";
+import { timeHandlers } from "./time/handlers";
 
 /** Zentrale Registrierung aller Event-Handler der Fachmodule. */
 export function allHandlers(): HandlerMap {
-  const maps = [procurementHandlers, hrHandlers, rosterHandlers];
+  const maps = [procurementHandlers, hrHandlers, rosterHandlers, timeHandlers];
   const merged: HandlerMap = {};
   for (const m of maps) for (const [type, hs] of Object.entries(m)) (merged[type] ??= []).push(...hs);
   return merged;

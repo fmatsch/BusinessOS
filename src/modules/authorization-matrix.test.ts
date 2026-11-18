@@ -4,6 +4,7 @@ import { PERMISSIONS, SYSTEM_ROLES, type Permission } from "@/platform/authz/per
 import { publishPolicy, readPolicy } from "@/platform/approvals/policy";
 import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAbsence, listEmployees, listPendingAbsenceApprovals, listAbsences, requestAbsence, updateEmployee, writeSensitive } from "./hr/service";
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
+import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { budgetOverview, committedByDepartment, setBudget } from "./budget/service";
 import { createCostCenter, createDepartment, listCostCenters, listDepartments } from "./masterdata/service";
 import { createOrder, createRequest, createSupplier, getRequest, listOrders, listRequests, listSuppliers } from "./procurement/service";
@@ -60,6 +61,23 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setRules", "roster.rules.manage", () => setRules(none, { restDailyMinutes: 660, maxDailyMinutes: 720, maxWeeklyMinutes: 3600, breakAfterMinutes: 360, minBreakMinutes: 30, weeklyRestMinutes: 2160 })],
   ["requestSwap", "roster.swap.request", () => requestSwap(none, { shiftId: "s", toEmployeeId: "e" })],
   ["decideSwap", "roster.swap.approve", () => decideSwap(none, "x", true)],
+  ["getClock", "time.entry.own", () => getClock(none)],
+  ["clockIn", "time.entry.own", () => clockIn(none)],
+  ["startBreak", "time.entry.own", () => startBreak(none)],
+  ["endBreak", "time.entry.own", () => endBreak(none)],
+  ["clockOut", "time.entry.own", () => clockOut(none)],
+  ["discardClock", "time.entry.own", () => discardClock(none)],
+  ["requestEntry", "time.entry.own", () => requestEntry(none, { type: "DELETE", targetEntryId: "x", reason: "Test" })],
+  ["cancelRequest", "time.entry.own", () => cancelRequest(none, "x")],
+  ["submitPeriod", "time.entry.own", () => submitPeriod(none, { year: 2026, month: 1 })],
+  ["addEntryDirect", "time.entry.correct", () => addEntryDirect(none, { employeeId: "x", date: "2026-01-05", startTime: "08:00", endTime: "09:00", reason: "Test" })],
+  ["correctEntryDirect", "time.entry.correct", () => correctEntryDirect(none, { entryId: "x", date: "2026-01-05", startTime: "08:00", endTime: "09:00", reason: "Test" })],
+  ["deleteEntryDirect", "time.entry.correct", () => deleteEntryDirect(none, { entryId: "x", reason: "Test" })],
+  ["reopenPeriod", "time.period.reopen", () => reopenPeriod(none, { employeeId: "x", year: 2026, month: 1, reason: "Test" })],
+  ["addAccountAdjustment", "time.account.write", () => addAccountAdjustment(none, { employeeId: "x", minutes: 10, note: "Test" })],
+  ["setPayCodeRules", "time.rules.manage", () => setPayCodeRules(none, { NIGHT: 25, SUNDAY: 100, HOLIDAY: 100, OVERTIME: 50 })],
+  ["getPayCodeRules", "time.entry.read_all", () => getPayCodeRules(none)],
+  ["listTeam", "time.period.approve", () => listTeam(none, 2026, 1)],
   ["publishPolicy", "org.settings.manage", () => publishPolicy(none, [])],
   ["readPolicy", "org.settings.manage", () => readPolicy(none)],
 ];
@@ -105,6 +123,12 @@ describe("Autorisierungsmatrix: Rollen", () => {
     expect(roles("roster.swap.approve")).toEqual(["manager", "owner", "scheduler"]);
     expect(roles("roster.swap.request")).toEqual(["employee", "finance", "hr", "manager", "owner", "scheduler"]);
   });
+  it("Zeiterfassung: alle stempeln; Fremdzugriff, Direktkorrektur, Wiedereröffnen, Zeitkonto und Regeln nur Personalwesen/Inhaber; Führungskraft gibt Team frei", () => {
+    expect(roles("time.entry.own")).toEqual(["employee", "finance", "hr", "manager", "owner", "scheduler"]);
+    for (const p of ["time.entry.read_all", "time.entry.correct", "time.period.approve_all", "time.period.reopen", "time.account.write", "time.rules.manage"] as const)
+      expect(roles(p)).toEqual(["hr", "owner"]);
+    expect(roles("time.period.approve")).toEqual(["hr", "manager", "owner"]);
+  });
   it("jeder Benutzer mit einer Rolle darf Abwesenheit beantragen", () => {
     expect(roles("hr.absence.request")).toEqual(["employee", "finance", "hr", "manager", "owner", "scheduler"]);
   });
@@ -114,7 +138,7 @@ describe("Autorisierungsmatrix: Rollen", () => {
   });
   it("Mitarbeiter dürfen nur anfordern und Stammdaten lesen – nichts schreiben oder freigeben", () => {
     const perms = SYSTEM_ROLES.employee!.permissions;
-    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request"].includes(p))).toEqual([]);
+    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own"].includes(p))).toEqual([]);
   });
   it("Budgets ändern dürfen nur Finanzen und Inhaber", () => {
     expect(roles("finance.budget.write")).toEqual(["finance", "owner"]);

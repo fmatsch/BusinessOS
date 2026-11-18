@@ -14,6 +14,8 @@ const NAV = [
   { href: "/hr", key: "nav.hr", live: true },
   { href: "/absences", key: "nav.absences", live: true },
   { href: "/roster", key: "nav.roster", live: true },
+  { href: "/time", key: "nav.time", live: true },
+  { href: "/time/team", key: "nav.timeTeam", live: true },
   { href: "/procurement", key: "nav.procurement", live: true },
   { href: "/suppliers", key: "nav.suppliers", live: true },
   { href: "/planned/inventory", key: "nav.inventory" },

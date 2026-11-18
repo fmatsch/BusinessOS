@@ -68,6 +68,8 @@ async function main() {
       data: { organizationId: org0.id, number: p.number, firstName: p.first, lastName: p.last, jobTitle: p.title, email: p.email, userId: user.id, managerId: p.manager ? empIds[p.manager] : null },
     }));
     empIds[p.email] = e.id;
+    if (!(await db.employment.findFirst({ where: { employeeId: e.id } })))
+      await db.employment.create({ data: { organizationId: org0.id, employeeId: e.id, validFrom: new Date("2020-01-01T00:00:00Z"), contractType: "FULL_TIME", weeklyHours: 38.5 } });
     if (!(await db.leaveBalanceEntry.findFirst({ where: { employeeId: e.id, year: new Date().getFullYear(), kind: "ENTITLEMENT" } })))
       await db.leaveBalanceEntry.create({ data: { organizationId: org0.id, employeeId: e.id, year: new Date().getFullYear(), kind: "ENTITLEMENT", days: 25, note: "Jahresanspruch (Demo)" } });
   }

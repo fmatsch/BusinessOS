@@ -33,6 +33,14 @@ export const PERMISSIONS = [
   "roster.swap.request",
   "roster.swap.approve",
   "roster.rules.manage",
+  "time.entry.own",
+  "time.entry.read_all",
+  "time.entry.correct",
+  "time.period.approve",
+  "time.period.approve_all",
+  "time.period.reopen",
+  "time.account.write",
+  "time.rules.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -57,6 +65,7 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "finance.budget.write",
       "hr.absence.request",
       "roster.swap.request",
+      "time.entry.own",
     ],
   },
   hr: {
@@ -76,6 +85,14 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "hr.absence.approve",
       "hr.absence.approve_all",
       "roster.swap.request",
+      "time.entry.own",
+      "time.entry.read_all",
+      "time.entry.correct",
+      "time.period.approve",
+      "time.period.approve_all",
+      "time.period.reopen",
+      "time.account.write",
+      "time.rules.manage",
     ],
   },
   scheduler: {
@@ -89,6 +106,7 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "roster.publish",
       "roster.swap.request",
       "roster.swap.approve",
+      "time.entry.own",
     ],
   },
   manager: {
@@ -107,10 +125,12 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "roster.read_all",
       "roster.swap.request",
       "roster.swap.approve",
+      "time.entry.own",
+      "time.period.approve",
     ],
   },
   employee: {
     name: "Mitarbeiter",
-    permissions: ["master.department.read", "master.costcenter.read", "procurement.request.create", "hr.absence.request", "roster.swap.request"],
+    permissions: ["master.department.read", "master.costcenter.read", "procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own"],
   },
 };

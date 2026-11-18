@@ -22,6 +22,7 @@
 | KI | nur lesende Tools mit Benutzerkontext, kein freies SQL, Werkzeugdaten als `<untrusted_data>` gekapselt, Quellen serverseitig, Audit jeder Aktion, Rate-Limit; Schreibzugriffe gibt es nicht (später nur mit Bestätigung) |
 | DSGVO | Datenminimierung, Löschkonzept für personenbezogene Daten, Auskunftsfähigkeit über Audit-Log |
 | HR-Daten | persönliche Angaben getrennt gespeichert, eigene Berechtigung, Lesezugriffe im Audit-Log (ohne Inhalte); Vertragsdaten nur Personal/Person selbst; Krankenstand ohne Diagnosen; Urlaubsjournal per Trigger unveränderlich |
+| Zeitdaten | eigene Daten, direkte Führungskraft nur Team, Personalwesen alle; Fremdzugriffe im Audit-Log; Buchungs- und Zeitkonto-Journal per Trigger unveränderlich; Korrekturen nur mit Begründung und Freigabe; keine Ortung/Aktivitätsmessung |
 | Demo-Daten | ausschließlich synthetisch |
 
 ## Bekannte Lücken (offen)

@@ -655,3 +655,124 @@ model RosterRules {
   /// zusammenhängende Wochenruhe (Minuten)
   weeklyRestMinutes Int    @default(2160)
 }
+
+// ───────── Zeiterfassung (M9) ─────────
+
+/// Laufende Stempelung (flüchtiger Zustand, wird beim Ausstempeln zu einem unveränderlichen TimeEntry)
+model TimeClock {
+  employeeId     String    @id
+  organizationId String
+  startedAt      DateTime
+  costCenterId   String?
+  breakStartedAt DateTime?
+  breakMinutes   Int       @default(0)
+}
+
+/// Unveränderlicher Zeitbuchungs-Journal (DB-Trigger verbietet UPDATE/DELETE). Korrektur = REVERSAL + neue WORK-Buchung.
+model TimeEntry {
+  id             String     @id @default(cuid())
+  organizationId String
+  employeeId     String
+  /// WORK | REVERSAL
+  kind           String
+  startAt        DateTime
+  endAt          DateTime
+  breakMinutes   Int        @default(0)
+  /// Ortsdatum des Beginns in der Organisationszeitzone (für Periodenzuordnung)
+  localDate      DateTime   @db.Date
+  costCenterId   String?
+  /// CLOCK | MANUAL | CORRECTION | REVERSAL
+  source         String
+  reason         String?
+  /// bei Korrektur: die ersetzte Buchung
+  replacesId     String?
+  reversesId     String?    @unique
+  reverses       TimeEntry? @relation("TimeEntryReversal", fields: [reversesId], references: [id])
+  reversedBy     TimeEntry? @relation("TimeEntryReversal")
+  createdById    String
+  createdAt      DateTime   @default(now())
+
+  @@index([organizationId, employeeId, startAt])
+}
+
+enum TimeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+/// Antrag auf nachträgliche Erfassung, Korrektur oder Stornierung einer Buchung (mit Begründung und Freigabe)
+model TimeEntryRequest {
+  id             String            @id @default(cuid())
+  organizationId String
+  employeeId     String
+  /// ADD | CORRECT | DELETE
+  type           String
+  targetEntryId  String?
+  startAt        DateTime?
+  endAt          DateTime?
+  breakMinutes   Int?
+  costCenterId   String?
+  reason         String
+  status         TimeRequestStatus @default(PENDING)
+  decidedById    String?
+  decidedAt      DateTime?
+  comment        String?
+  createdAt      DateTime          @default(now())
+
+  @@index([organizationId, status])
+  @@index([organizationId, employeeId])
+}
+
+enum PeriodStatus {
+  OPEN
+  SUBMITTED
+  APPROVED
+}
+
+/// Monatsabschluss je Mitarbeiter: eingereicht → freigegeben (gesperrt) → ggf. mit Begründung wieder geöffnet
+model TimesheetPeriod {
+  id             String       @id @default(cuid())
+  organizationId String
+  employeeId     String
+  year           Int
+  month          Int
+  status         PeriodStatus @default(OPEN)
+  submittedAt    DateTime?
+  approvedById   String?
+  approvedAt     DateTime?
+  /// Ergebnis zum Zeitpunkt der Freigabe (Ist, Soll, Saldo, Kategorien)
+  summary        Json?
+  reopenCount    Int          @default(0)
+
+  @@unique([organizationId, employeeId, year, month])
+}
+
+/// Zeitkonto (Überstunden-/Gleitzeitsaldo) als Journal, append-only: Saldo = Summe der Minuten
+model TimeAccountEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  employeeId     String
+  /// PERIOD | REVERSAL | ADJUSTMENT
+  kind           String
+  minutes        Int
+  periodId       String?
+  year           Int?
+  month          Int?
+  note           String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, employeeId])
+}
+
+/// Zuschlagsregeln (Prozentsätze sind Konfiguration, kein Rechtsrat; die Auszahlung folgt mit dem Lohn-Export)
+model PayCodeRule {
+  organizationId String
+  /// NIGHT | SUNDAY | HOLIDAY | OVERTIME
+  kind           String
+  percent        Decimal @db.Decimal(6, 2)
+
+  @@id([organizationId, kind])
+}

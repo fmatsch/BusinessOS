@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { login } from "./helpers";
 
 // Automatische WCAG-2-A/AA-Prüfung (axe-core). Deckt nur einen Teil der Barrierefreiheit ab – ersetzt keinen manuellen Test.
-const pages = ["/", "/departments", "/cost-centers", "/budgets", "/suppliers", "/procurement", "/audit", "/copilot", "/notifications", "/settings/approvals", "/hr", "/absences", "/roster", "/roster/settings", "/planned/finance"];
+const pages = ["/", "/departments", "/cost-centers", "/budgets", "/suppliers", "/procurement", "/audit", "/copilot", "/notifications", "/settings/approvals", "/hr", "/absences", "/roster", "/roster/settings", "/time", "/time/team", "/planned/finance"];
 
 async function scan(page: Page) {
   const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
@@ -61,6 +61,17 @@ test("Dienstplan-Detailseite hat keine WCAG-A/AA-Verstöße", async ({ page }) =
     await page.goto(url);
     await expect(page.locator("h1").first()).toBeVisible();
     expect(await scan(page), `Dienstplan (${scheme})`).toEqual([]);
+  }
+});
+
+test("Zeiten-Detailseite einer Person hat keine WCAG-A/AA-Verstöße", async ({ page }) => {
+  await login(page, "admin");
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto("/time/team");
+    await page.getByRole("table").getByRole("link").first().click();
+    await expect(page.locator("h1").first()).toContainText("Zeiten:");
+    expect(await scan(page), `Zeiten Person (${scheme})`).toEqual([]);
   }
 });
 

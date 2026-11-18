@@ -87,9 +87,22 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⚠️ Tausch nur freigebbar, wenn der Plan keine unveröffentlichten Änderungen hat; Tausch läuft nicht über die Genehmigungs-Engine
 * ⚠️ Zeiten in der Übersicht werden in der Organisationszeitzone angezeigt (Schichten anderer Zeitzonen eines Standorts werden dort nicht umgerechnet beschriftet)
 
+## M9 – Zeiterfassung
+* ✅ Stempeluhr (Kommen, Pause, Gehen) im Web; vergessenes Ausstempeln (> 16 h) wird nicht gebucht, sondern verworfen und per Antrag nachgetragen
+* ✅ **Buchungsjournal append-only** (DB-Trigger): Korrektur = Gegenbuchung + neue Buchung, Original bleibt sichtbar; Nachträge/Korrekturen/Stornos werden **beantragt und von der direkten Führungskraft oder dem Personalwesen freigegeben** (nie selbst); Personalwesen kann mit Begründung direkt buchen
+* ✅ Monatsabschluss: einreichen (sperrt Eigenaktionen) → freigeben (sperrt für alle, bucht Ist − Soll ins **Zeitkonto-Journal**) oder zurückgeben; Wiederöffnen nur Personalwesen mit Begründung (Gegenbuchung im Zeitkonto)
+* ✅ Auswertung: Ist, Soll (Wochenstunden/5 an Arbeitstagen, Abwesenheiten neutral), Kategorien Nacht/Sonntag/Feiertag/Mehrzeit in Minuten, **Plan/Ist** je Tag gegen den veröffentlichten Dienstplan, **Compliance-Hinweise** (Pause, Ruhezeit, Höchstarbeitszeit – dieselben einstellbaren Regeln wie der Dienstplan)
+* ✅ Datenschutz: eigene Daten; Führungskraft nur direktes Team; Personalwesen alle; **jeder Fremdzugriff wird im Audit-Log protokolliert**; keine Ortung, keine Aktivitätsmessung
+* ✅ Sperren gegen Rennen: paralleles Einstempeln, Freigeben, Buchen je Person
+* ⚠️ Annahmen: 5-Tage-Woche, österreichischer Feiertagskalender, Buchung wird dem Monat des Beginns zugeordnet, Zuschlagskategorien anteilig nach Pausenabzug; keine halben Tage/Teilzeit-Arbeitstage, keine Gleitzeit-Kernzeiten
+* ⚠️ Zuschlagsprozente (`PayCodeRule`) sind hinterlegt, werden aber erst vom Lohn-Export (M10) verwendet; „Mehrzeit" = positiver Monatssaldo (kein Überstundenmodell nach Kollektivvertrag)
+* ⚠️ Nur Web (kein Terminal/Smartphone-Offline); Buchungen in der Zukunft nicht möglich; Mindestdauer einer Stempelung 1 Minute
+* ⚠️ Kein Löschkonzept/Aufbewahrungsfristen für Zeitdaten; Einführung kann Betriebsvereinbarung/Betriebsratszustimmung erfordern (siehe MODULES.md)
+* ⚠️ Beschäftigungsdaten sind Voraussetzung für die Freigabe eines Monats (sonst gäbe es kein Soll)
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
-* ⬜ M9 Zeiterfassung · M10 Lohn-Export, später Kundenabrechnung
+* ⬜ M10 Lohn-Export, später Kundenabrechnung
 * ⬜ M11 Projekte · M12 Finance (Doppik) · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

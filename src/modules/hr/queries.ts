@@ -42,3 +42,13 @@ export async function employmentOn(tx: Tx, organizationId: string, employeeId: s
 
 // Kalenderhilfen für andere Module (z. B. Dienstplanung)
 export { addDays, dateFromIso, isoFromDate, isValidIsoDate } from "./calendar";
+
+export { austrianHolidays, countWorkingDays, isWorkingDay } from "./calendar";
+
+/** Beschäftigungszeiträume, die den Zeitraum berühren (ISO-Daten). */
+export async function employmentsOverlapping(tx: Tx, organizationId: string, employeeId: string, fromIso: string, toIso: string) {
+  const rows = await tx.employment.findMany({ where: { organizationId, employeeId } });
+  return rows
+    .map((e) => ({ from: isoFromDate(e.validFrom), to: e.validTo ? isoFromDate(e.validTo) : null, weeklyHours: e.weeklyHours.toString() }))
+    .filter((e) => e.from <= toIso && (e.to === null || e.to >= fromIso));
+}
