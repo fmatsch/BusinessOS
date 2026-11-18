@@ -1000,6 +1000,88 @@ model SupplierInvoiceLine {
   costCenterId     String?
 }
 
+// ───────── Projekte: Leistungserfassung und Abrechnung nach Stunden ─────────
+
+/// Projekt. Die Projektstunden sind eine eigene Leistungserfassung (unabhängig von der Arbeitszeiterfassung).
+model Project {
+  id             String    @id @default(cuid())
+  organizationId String
+  /// lückenlose Projektnummer (PJ-2027-0001)
+  number         String
+  name           String
+  customerId     String?
+  costCenterId   String?
+  /// ACTIVE | CLOSED
+  status         String    @default("ACTIVE")
+  /// Verrechnungssatz je Stunde (netto)
+  hourlyRate     Decimal?  @db.Decimal(19, 2)
+  budgetHours    Decimal?  @db.Decimal(9, 2)
+  startsOn       DateTime? @db.Date
+  endsOn         DateTime? @db.Date
+  note           String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  times    ProjectTime[]
+  billings ProjectBilling[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+}
+
+/// Gebuchte Projektzeit. Journal: unveränderlich (Trigger), Korrektur nur per Gegenbuchung (REVERSAL).
+model ProjectTime {
+  id             String       @id @default(cuid())
+  organizationId String
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id])
+  employeeId     String
+  workDate       DateTime     @db.Date
+  minutes        Int
+  note           String?
+  /// WORK | REVERSAL
+  kind           String
+  reversesId     String?      @unique
+  reverses       ProjectTime? @relation("ProjectTimeReversal", fields: [reversesId], references: [id])
+  reversedBy     ProjectTime? @relation("ProjectTimeReversal")
+  createdById    String
+  createdAt      DateTime     @default(now())
+
+  billingItem ProjectBillingItem?
+
+  @@index([organizationId, projectId, workDate])
+  @@index([organizationId, employeeId, workDate])
+}
+
+/// Abrechnungslauf eines Projekts: erzeugt einen Rechnungsentwurf. Unveränderlich (Trigger).
+model ProjectBilling {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id])
+  invoiceId      String   @unique
+  /// letzter Stichtag (inklusive)
+  upTo           DateTime @db.Date
+  minutes        Int
+  hourlyRate     Decimal  @db.Decimal(19, 2)
+  netAmount      Decimal  @db.Decimal(19, 4)
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  items ProjectBillingItem[]
+
+  @@index([organizationId, projectId])
+}
+
+/// Jede Projektzeit wird höchstens einmal abgerechnet (eindeutig).
+model ProjectBillingItem {
+  id        String         @id @default(cuid())
+  billingId String
+  billing   ProjectBilling @relation(fields: [billingId], references: [id])
+  timeId    String         @unique
+  time      ProjectTime    @relation(fields: [timeId], references: [id])
+}
+
 // ───────── CRM (schlank): Kontakte, Aktivitäten, Angebote ─────────
 
 /// Ansprechperson eines Kunden. Personenbezogen: Löschwunsch per Anonymisierung (Name und Kontaktdaten werden gelöscht, der Datensatz bleibt für Verweise).

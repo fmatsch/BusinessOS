@@ -27,6 +27,7 @@ Modularer Monolith: Next.js (App Router) + TypeScript strict + Prisma/PostgreSQL
 10e. **Finance**: gebuchte/exportierte Belege nie ändern – Gutschrift; Exportläufe unveränderlich, jeder Beleg höchstens einmal; Uploads nur per Inhaltsprüfung; Eingangsrechnungen nur mit Vier-Augen-Freigabe; Steuer nur über `finance/tax.ts`; Aussteller-Angaben im PDF nur aus dem Snapshot am Beleg (`issuerSnapshot`), nie aus dem aktuellen Profil.
 10f. **Wareneingang/Abgleich**: Wareneingänge nie ändern – Gegenbuchung; Abgleich nur über `finance/match.ts` (rein, getestet); Rechnungsfreigabe mit Abweichung nur nach Akzeptieren mit Begründung.
 10g. **CRM/Angebote**: Angebote nie bearbeiten (Kopie); Versand nur nach Freigabe laut Regel `QUOTE`; Aktivitäten nie ändern; Personendaten nie ins Audit-Log; Löschwunsch nur per `anonymizeContact`.
+10h. **Projekte**: Projektzeiten nie ändern (Gegenbuchung); abgerechnete Zeiten nie korrigieren (Gutschrift); Abrechnung nur über `billProject` (Projektsperre, Rechnungsentwurf über Finance-Service); Verrechnungssatz nur für `project.manage`/`project.bill` sichtbar.
 11. **UI-Texte** über i18n (`de` Standard, `en`). Nicht implementierte Module klar als „geplant" kennzeichnen.
 12. **Keine Behauptung ohne Verifikation**: Features erst als fertig melden, wenn Tests/Typecheck laufen.
 13. Demo-Daten nur synthetisch.

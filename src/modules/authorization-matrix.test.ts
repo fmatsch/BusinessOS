@@ -6,6 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import { billProject, bookProjectTime, createProject, getProject, listProjects, reverseProjectTime, setProjectStatus } from "./projects/service";
 import { acceptQuote, addActivity, anonymizeContact, cancelQuote, createContact, createQuote, declineQuote, decideQuote, duplicateQuote, getCrmCustomer, getQuote, getQuotePdf, listCrmCustomers, listPendingQuoteApprovals, listQuotes, sendQuote, submitQuote } from "./crm/service";
 import { createRecurring, listRecurring, runRecurringInvoices, setRecurringActive } from "./finance/recurring-invoices";
 import { createDunningNotice, getDunningPdf, listOpenItems } from "./finance/receivables";
@@ -101,6 +102,13 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["listProjects", "project.read", () => listProjects(none)],
+  ["getProject", "project.read", () => getProject(none, "x")],
+  ["reverseProjectTime", "project.read", () => reverseProjectTime(none, "x", "Grund")],
+  ["createProject", "project.manage", () => createProject(none, { name: "x" })],
+  ["setProjectStatus", "project.manage", () => setProjectStatus(none, "x", "CLOSED")],
+  ["bookProjectTime", "project.time.book", () => bookProjectTime(none, { projectId: "x", workDate: "2027-01-01", hours: "1" })],
+  ["billProject", "project.bill", () => billProject(none, { projectId: "x", upTo: "2027-01-01", taxCodeId: "x" })],
   ["listCrmCustomers", "crm.read", () => listCrmCustomers(none)],
   ["getCrmCustomer", "crm.read", () => getCrmCustomer(none, "x")],
   ["createContact", "crm.write", () => createContact(none, { customerId: "x", name: "x" })],
@@ -218,7 +226,7 @@ describe("Autorisierungsmatrix: Rollen", () => {
   });
   it("Mitarbeiter dürfen nur anfordern und Stammdaten lesen – nichts schreiben oder freigeben", () => {
     const perms = SYSTEM_ROLES.employee!.permissions;
-    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own"].includes(p))).toEqual([]);
+    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.time.book"].includes(p))).toEqual([]);
   });
   it("Budgets ändern dürfen nur Finanzen und Inhaber", () => {
     expect(roles("finance.budget.write")).toEqual(["finance", "owner"]);

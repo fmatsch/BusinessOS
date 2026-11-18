@@ -72,6 +72,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **CRM**
 `Contact` (anonymisierbar), `Activity` (append-only per Trigger), `Quote` + `QuoteLine` (Status, Nummer beim Versenden, `issuerSnapshot`, `invoiceId` zum erzeugten Rechnungsentwurf). `Approval.quoteId` erweitert die Freigabe um Angebote (CHECK: genau ein Bezug).
 
+**Projekte**
+`Project`, `ProjectTime` (Journal, Gegenbuchung per `reversesId`), `ProjectBilling` + `ProjectBillingItem` (jede Zeit höchstens einmal abgerechnet, `timeId` eindeutig). Alle drei Journaltabellen per Trigger append-only.
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

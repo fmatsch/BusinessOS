@@ -145,9 +145,15 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ⚠️ Keine Leads/Pipeline-Phasen, keine Kampagnen, keine E-Mail-Anbindung; Freitext in Aktivitäten wird beim Anonymisieren nicht bereinigt; Angebote nur in der Währung der Organisation, ohne Rabatte/Optionen
 * ⚠️ Neue Berechtigungen (`crm.*`) erreichen bestehende Organisationen per `npm run db:sync-roles`
 
+## M11 Projekte (Leistungserfassung und Abrechnung nach Stunden)
+* ✅ Projekte mit Nummer (PJ-JJJJ-NNNN), Kunde, Kostenstelle, Stundensatz, Stundenbudget und Zeitraum; abschließen/wieder öffnen
+* ✅ Projektzeiten buchen (eigene Person, höchstens 24 h je Tag über alle Projekte, nicht in der Zukunft); Journal mit Gegenbuchung; Mitarbeiter sehen nur eigene Buchungen und keinen Verrechnungssatz
+* ✅ Abrechnen nach Stunden: alle offenen Zeiten bis zum Stichtag → ein Rechnungsentwurf (gerundete Stunden × Satz); jede Zeit höchstens einmal (eindeutig), Abrechnung und Korrektur per Projektsperre serialisiert; abgerechnete Zeiten nur per Gutschrift korrigierbar
+* ⚠️ Projektstunden sind **getrennt** von der Arbeitszeiterfassung (kein Abgleich, kein Stempeln auf Projekte); ein Stundensatz je Projekt (keine Sätze je Person/Tätigkeit); keine Spesen/Material; keine Projektstruktur (Aufgaben, Phasen)
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
-* ⬜ Kundenabrechnung nach Stunden (braucht Projekte und Finance)
-* ⬜ M11 Projekte · Inventar · Workflow-Designer · Analysen
+* ✅ Kundenabrechnung nach Stunden (M11, über Rechnungsentwurf)
+* ⬜ Inventar · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { LANG_COOKIE, t, type TKey } from "@/lib/i18n";
 
-const MODULES = ["inventory", "projects", "workflows", "analytics"];
+const MODULES = ["inventory", "workflows", "analytics"];
 
 export default async function Planned({ params }: { params: Promise<{ module: string }> }) {
   const { module } = await params;
