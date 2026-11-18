@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BusinessOS – Das Betriebssystem für Unternehmen</title>
+<meta name="description" content="Modulare, KI-native ERP-Plattform: Beschaffung, Budget, Finanzen, HR und mehr – mandantenfähig, auditierbar, offen.">
+<meta name="color-scheme" content="light dark">
+<style>
+  :root { --bg:#f6f5f1; --surface:#fff; --text:#1c1b19; --muted:#6b6860; --line:#e4e1d9; --accent:#4f46e5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141413; --surface:#1d1c1a; --text:#f1efe9; --muted:#a19d93; --line:#2e2c29; --accent:#818cf8; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:960px; margin:0 auto; padding:72px 24px 48px; }
+  h1 { font-size:clamp(34px,6vw,56px); letter-spacing:-.03em; line-height:1.1; margin:0 0 16px; }
+  .lead { font-size:20px; color:var(--muted); max-width:640px; margin:0 0 28px; }
+  a { color:var(--accent); }
+  .btn { display:inline-block; padding:10px 18px; border-radius:10px; background:var(--accent); color:#fff; text-decoration:none; font-weight:600; }
+  .badge { display:inline-block; font-size:13px; padding:3px 10px; border-radius:99px; border:1px solid var(--line); background:var(--surface); color:var(--muted); margin-bottom:20px; }
+  h2 { margin:56px 0 16px; font-size:22px; letter-spacing:-.01em; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .card h3 { margin:0 0 6px; font-size:16px; }
+  .card p { margin:0; color:var(--muted); font-size:14px; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:99px; background:var(--line); color:var(--muted); margin-left:6px; vertical-align:middle; }
+  .tag.live { background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); }
+  footer { margin-top:64px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+<main>
+  <span class="badge">Frühe Entwicklung · Foundation-Phase</span>
+  <h1>BusinessOS</h1>
+  <p class="lead">Das Betriebssystem für Unternehmen: eine modulare, KI-native ERP-Plattform mit einer gemeinsamen Datenbasis, Mandantentrennung und lückenlosem Audit.</p>
+  <a class="btn" href="https://github.com/fmatsch/BusinessOS">Quellcode auf GitHub</a>
+
+  <h2>Module</h2>
+  <div class="grid">
+    <div class="card"><h3>Organisationen &amp; Rechte <span class="tag live">Foundation</span></h3><p>Mehrere Firmen pro Benutzer, Rollen und Berechtigungen, serverseitig geprüft.</p></div>
+    <div class="card"><h3>Beschaffung <span class="tag">geplant</span></h3><p>Bestellanforderung, Genehmigung, Bestellung, Budget-Bindung.</p></div>
+    <div class="card"><h3>Finanzen <span class="tag">geplant</span></h3><p>Doppelte Buchführung, unveränderliche Buchungen, Storno.</p></div>
+    <div class="card"><h3>Personal <span class="tag">geplant</span></h3><p>Verzeichnis, Abwesenheiten, getrennte Zugriffsrechte.</p></div>
+    <div class="card"><h3>Lager &amp; Projekte <span class="tag">geplant</span></h3><p>Nachvollziehbare Bestandsbewegungen, Projektbudgets.</p></div>
+    <div class="card"><h3>KI-Copilot <span class="tag">geplant</span></h3><p>Fragen an die eigenen Daten – über berechtigungsgeprüfte Werkzeuge, mit Quellenangabe.</p></div>
+  </div>
+
+  <h2>Prinzipien</h2>
+  <p>Eine Quelle der Wahrheit · API-first · Strikte Mandantentrennung · Jede Änderung im Audit-Log · KI ist Schnittstelle, nicht Ersatz für Geschäftslogik · Deutsch und Englisch.</p>
+
+  <footer>Teil von <a href="https://fmatsch.ist">fmatsch.ist</a> · Diese Seite ist eine statische Vorstellung; die Anwendung benötigt Server und Datenbank.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Sicherheit
+
+## Grundsätze
+1. **Serverseitige Autorisierung für jede geschützte Operation** – Frontend-Filter sind nie eine Sicherheitsmaßnahme.
+2. **Mandantentrennung**: jede Query ist an `organizationId` aus der serverseitig geprüften Mitgliedschaft gebunden. Nie aus Client-Eingaben.
+3. **Least Privilege**: Standardrollen erhalten nur nötige Permissions; HR-Sensibles separat.
+4. **Audit**: alle schreibenden Operationen und KI-Aktionen werden protokolliert; Einträge sind append-only.
+
+## Maßnahmen
+| Bereich | Umsetzung |
+|---|---|
+| Passwörter | bcrypt (Kostenfaktor ≥ 12), Mindestlänge 12 |
+| Sessions | Auth.js JWT, httpOnly, Secure, SameSite=Lax |
+| Eingaben | Zod an jeder Grenze (Server Actions, API) |
+| Rate Limiting | Login und KI-Endpunkte (Phase 2/4) |
+| CSRF | Server Actions / SameSite-Cookies |
+| XSS | React-Escaping, keine `dangerouslySetInnerHTML`, CSP-Header |
+| Header | `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, CSP in `next.config` |
+| Secrets | nur über Umgebungsvariablen, nie im Browser-Bundle (kein `NEXT_PUBLIC_` für Schlüssel), `.env` ist ignoriert |
+| Fehler | generische Meldungen an Clients, Details nur im Server-Log |
+| Uploads | Typ- und Größenprüfung, Speicherung außerhalb des Webroots (Phase später) |
+| KI | nur Tools, kein freies SQL, Bestätigung bei Änderungen, Dokumentinhalte als nicht vertrauenswürdig |
+| DSGVO | Datenminimierung, Löschkonzept für personenbezogene Daten, Auskunftsfähigkeit über Audit-Log |
+| Demo-Daten | ausschließlich synthetisch |
+
+## Bekannte Lücken (offen)
+* Postgres Row-Level-Security noch nicht aktiv.
+* MFA nicht umgesetzt.
+* Rate Limiting zunächst in-memory (nicht verteilt).
+
+## Meldung
+Sicherheitslücken bitte per GitHub „Security Advisories" melden, nicht als öffentliches Issue.
