@@ -55,7 +55,7 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 * Läufe und Zeilen sind unveränderlich (Trigger); Summe aller Zeilen eines Monats = exportierter Stand
 
 **Weitere (Schema vorbereitet, Funktion später)**
-`Account`, `JournalEntry`, `JournalLine`, `Invoice`, `Payment`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
+Noch **nicht im Schema** (nur geplant): Finanzbuchhaltung (`Account`, `JournalEntry`, `JournalLine`, Rechnungen, Zahlungen – siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`, `Customer`.
 
 ## Integritätsregeln
 * `JournalEntry`: Σ Soll = Σ Haben; gebucht ⇒ unveränderlich; Storno über `reversesId`.

@@ -113,7 +113,7 @@ Begründung der Reihenfolge:
 | Modul | Kern | Abhängigkeit |
 |---|---|---|
 | **Projekte (M11)** | Projekte, Aufgaben, Meilensteine, Budgets, Zeitbuchung | Kostenstellen, M9 |
-| **Finance (M12)** | Kontenplan, Journal (Doppik, Storno), Debitoren/Kreditoren, Rechnungen, Zahlungen, Steuern | – |
+| **Finance (M12)** | Kontenplan, Journal (Doppik, Storno), Debitoren/Kreditoren, Rechnungen, Zahlungen, Steuern – **Plan: [FINANCE.md](FINANCE.md)** | – |
 | **Wareneingang und Rechnungsabgleich** | Beschaffung bis Zahlung schließen | Finance |
 | **Inventar** | Artikel, Lager, Bewegungen (append-only), Bestände | Beschaffung |
 | **CRM** | Firmen, Kontakte, Leads, Pipeline | Projekte (für A) |

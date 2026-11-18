@@ -115,5 +115,5 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
 * ⬜ Kundenabrechnung nach Stunden (braucht Projekte und Finance)
-* ⬜ M11 Projekte · M12 Finance (Doppik) · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
+* ⬜ M11 Projekte · M12 Finance (Doppik) – Detailplan: [FINANCE.md](FINANCE.md) · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

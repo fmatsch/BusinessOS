@@ -15,6 +15,7 @@ Sprache der Oberfläche: Deutsch (Standard) und Englisch.
 | [DATABASE.md](DATABASE.md) | Datenmodell und Konventionen |
 | [ROADMAP.md](ROADMAP.md) | Meilensteine und Risiken |
 | [MODULES.md](MODULES.md) | Plan für Dienstplanung, Zeiterfassung, Abrechnung und weitere Module |
+| [FINANCE.md](FINANCE.md) | Plan für Buchhaltung, Rechnungen, Zahlungen (noch nicht umgesetzt) |
 | [SECURITY.md](SECURITY.md) | Sicherheitskonzept |
 | [CLAUDE.md](CLAUDE.md) | Konventionen für künftige Claude-Code-Sitzungen |
 
