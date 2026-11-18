@@ -32,6 +32,8 @@ export const EVENT_CATALOG: Record<string, EventSpec> = {
   "sales.delivery.shipped": { label: "Lieferung versandt", fields: { number: { label: "Lieferscheinnummer", kind: "text" }, order: { label: "Auftragsnummer", kind: "text" } } },
   "production.order.released": { label: "Fertigungsauftrag freigegeben", fields: { number: { label: "Fertigungsauftrag", kind: "text" } } },
   "production.confirmed": { label: "Fertigung zurückgemeldet", fields: { order: { label: "Fertigungsauftrag", kind: "text" }, quantity: { label: "Menge", kind: "number" } } },
+  "quality.inspection.decided": { label: "Prüflos entschieden", fields: { number: { label: "Prüflos", kind: "text" }, status: { label: "Entscheid (ACCEPTED/REJECTED)", kind: "text" } } },
+  "maintenance.order.reported": { label: "Störung gemeldet", fields: { number: { label: "Auftrag", kind: "text" }, priority: { label: "Priorität", kind: "text" } } },
   "stock.below_reorder": { label: "Mindestbestand unterschritten", fields: { item: { label: "Artikelnummer", kind: "text" }, onHand: { label: "Bestand", kind: "number" }, reorderLevel: { label: "Mindestbestand", kind: "number" } } },
 };
 

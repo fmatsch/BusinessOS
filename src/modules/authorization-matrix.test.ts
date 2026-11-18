@@ -9,6 +9,8 @@ import { createExport, getExportFile, getProfile, listExports, setProfile } from
 import * as payrun from "./payroll/run";
 import * as sales from "./sales/service";
 import * as prod from "./production/service";
+import * as qm from "./quality/service";
+import * as maint from "./maintenance/service";
 import { createAsset, disposeAsset, listAssets, runDepreciation } from "./gl/assets";
 import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, vatReturn, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
 import { exportReportCsv, listReports, runReport } from "./analytics/service";
@@ -112,6 +114,31 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["qm.createInspectionPlan", "qm.plan.manage", () => qm.createInspectionPlan(none, {})],
+  ["qm.activateInspectionPlan", "qm.plan.manage", () => qm.activateInspectionPlan(none, "x")],
+  ["qm.deleteInspectionPlanDraft", "qm.plan.manage", () => qm.deleteInspectionPlanDraft(none, "x")],
+  ["qm.listInspectionPlans", "qm.read", () => qm.listInspectionPlans(none)],
+  ["qm.createInspection", "qm.inspect", () => qm.createInspection(none, {})],
+  ["qm.recordInspectionResult", "qm.inspect", () => qm.recordInspectionResult(none, "x", {})],
+  ["qm.decideInspection", "qm.decide", () => qm.decideInspection(none, "x", {})],
+  ["qm.listInspections", "qm.read", () => qm.listInspections(none)],
+  ["qm.getInspection", "qm.read", () => qm.getInspection(none, "x")],
+  ["qm.createNonConformance", "qm.nc.manage", () => qm.createNonConformance(none, {})],
+  ["qm.updateNonConformance", "qm.nc.manage", () => qm.updateNonConformance(none, "x", {})],
+  ["qm.closeNonConformance", "qm.nc.manage", () => qm.closeNonConformance(none, "x")],
+  ["qm.listNonConformances", "qm.read", () => qm.listNonConformances(none)],
+  ["maint.createMaintenanceObject", "maint.manage", () => maint.createMaintenanceObject(none, {})],
+  ["maint.setMaintenanceObjectActive", "maint.manage", () => maint.setMaintenanceObjectActive(none, "x", false)],
+  ["maint.createMaintenancePlan", "maint.manage", () => maint.createMaintenancePlan(none, {})],
+  ["maint.setMaintenancePlanActive", "maint.manage", () => maint.setMaintenancePlanActive(none, "x", false)],
+  ["maint.listMaintenancePlans", "maint.read", () => maint.listMaintenancePlans(none)],
+  ["maint.generateDueOrders", "maint.manage", () => maint.generateDueOrders(none)],
+  ["maint.reportIssue", "maint.report", () => maint.reportIssue(none, {})],
+  ["maint.startMaintenanceOrder", "maint.work", () => maint.startMaintenanceOrder(none, "x")],
+  ["maint.completeMaintenanceOrder", "maint.work", () => maint.completeMaintenanceOrder(none, "x", {})],
+  ["maint.cancelMaintenanceOrder", "maint.manage", () => maint.cancelMaintenanceOrder(none, "x")],
+  ["maint.listMaintenanceOrders", "maint.read", () => maint.listMaintenanceOrders(none)],
+  ["maint.getMaintenanceOrder", "maint.read", () => maint.getMaintenanceOrder(none, "x")],
   ["production.createBom", "production.bom.manage", () => prod.createBom(none, {})],
   ["production.updateBom", "production.bom.manage", () => prod.updateBom(none, "x", {})],
   ["production.activateBom", "production.bom.manage", () => prod.activateBom(none, "x")],
@@ -338,7 +365,7 @@ describe("Autorisierungsmatrix: Rollen", () => {
   });
   it("Mitarbeiter dürfen nur anfordern und Stammdaten lesen – nichts schreiben oder freigeben", () => {
     const perms = SYSTEM_ROLES.employee!.permissions;
-    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.time.book", "expense.submit", "payroll.payslip.own"].includes(p))).toEqual([]);
+    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.time.book", "expense.submit", "payroll.payslip.own", "maint.report"].includes(p))).toEqual([]);
   });
   it("Lohnabrechnung: Berechnen nur Personalwesen und Inhaber, Freigabe nur Inhaber (Vier-Augen)", () => {
     expect(roles("payroll.calc.manage")).toEqual(["hr", "owner"]);

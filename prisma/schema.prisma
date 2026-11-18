@@ -1079,6 +1079,202 @@ model JournalLine {
   @@index([entryId])
 }
 
+// ───────── Qualitätsmanagement ─────────
+
+/// Prüfplan je Artikel (Version). DRAFT → ACTIVE (Merkmale gesperrt; je Artikel höchstens ein aktiver) → ARCHIVED.
+model InspectionPlan {
+  id             String    @id @default(cuid())
+  organizationId String
+  itemId         String
+  version        Int
+  /// DRAFT | ACTIVE | ARCHIVED
+  status         String    @default("DRAFT")
+  note           String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  activatedAt    DateTime?
+
+  characteristics InspectionCharacteristic[]
+
+  @@unique([organizationId, itemId, version])
+}
+
+model InspectionCharacteristic {
+  id       String         @id @default(cuid())
+  planId   String
+  plan     InspectionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  position Int
+  name     String
+  /// QUANTITATIVE (Messwert zwischen Grenzen) | QUALITATIVE (in Ordnung / nicht in Ordnung)
+  kind     String
+  unit     String?
+  minValue Decimal?       @db.Decimal(19, 6)
+  maxValue Decimal?       @db.Decimal(19, 6)
+
+  @@unique([planId, position])
+}
+
+/// Prüflos. OPEN (Ergebnisse erfassen) → ACCEPTED | REJECTED (Entscheid); danach unveränderlich.
+model Inspection {
+  id             String    @id @default(cuid())
+  organizationId String
+  /// QP-2027-0001
+  number         String
+  itemId         String
+  planId         String
+  quantity       Decimal   @db.Decimal(19, 4)
+  batchNumber    String?
+  /// MANUAL | GOODS_RECEIPT | PRODUCTION
+  source         String    @default("MANUAL")
+  reference      String?
+  /// OPEN | ACCEPTED | REJECTED
+  status         String    @default("OPEN")
+  /// Annahme trotz nicht bestandener Merkmale (Sonderfreigabe, Begründung Pflicht)
+  deviation      Boolean   @default(false)
+  decisionNote   String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  decidedById    String?
+  decidedAt      DateTime?
+
+  results InspectionResult[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, itemId])
+}
+
+/// Ergebnis je Merkmal; die Prüfvorgaben werden zum Zeitpunkt der Erfassung festgehalten.
+model InspectionResult {
+  id               String     @id @default(cuid())
+  inspectionId     String
+  inspection       Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  characteristicId String
+  position         Int
+  name             String
+  kind             String
+  unit             String?
+  minValue         Decimal?   @db.Decimal(19, 6)
+  maxValue         Decimal?   @db.Decimal(19, 6)
+  value            Decimal?   @db.Decimal(19, 6)
+  /// bestanden (bei Messwerten aus den Grenzen berechnet)
+  passed           Boolean
+  note             String?
+  recordedById     String
+  recordedAt       DateTime   @default(now())
+
+  @@unique([inspectionId, characteristicId])
+}
+
+/// Abweichung/Reklamation mit Ursache und Maßnahme. Entsteht automatisch bei abgelehnten Prüflosen oder manuell.
+model NonConformance {
+  id             String    @id @default(cuid())
+  organizationId String
+  /// NC-2027-0001
+  number         String
+  inspectionId   String?
+  itemId         String?
+  description    String
+  cause          String?
+  action         String?
+  /// OPEN | CLOSED
+  status         String    @default("OPEN")
+  createdById    String
+  createdAt      DateTime  @default(now())
+  closedById     String?
+  closedAt       DateTime?
+
+  @@unique([organizationId, number])
+}
+
+// ───────── Instandhaltung ─────────
+
+/// Technisches Objekt (Maschine, Anlage, Fahrzeug); optional verknüpft mit einem Anlagegut der Anlagenbuchhaltung.
+model MaintenanceObject {
+  id             String   @id @default(cuid())
+  organizationId String
+  /// EQ-2027-0001
+  number         String
+  name           String
+  location       String?
+  fixedAssetId   String?
+  active         Boolean  @default(true)
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  plans  MaintenancePlan[]
+  orders MaintenanceOrder[]
+
+  @@unique([organizationId, number])
+}
+
+/// Wartungsplan: wiederkehrende Wartung in festen Abständen (Tage oder Monate). Erzeugt Aufträge, wenn fällig.
+model MaintenancePlan {
+  id             String            @id @default(cuid())
+  organizationId String
+  objectId       String
+  object         MaintenanceObject @relation(fields: [objectId], references: [id])
+  title          String
+  instructions   String?
+  /// DAYS | MONTHS
+  intervalUnit   String
+  intervalValue  Int
+  nextDueOn      DateTime          @db.Date
+  lastDoneOn     DateTime?         @db.Date
+  active         Boolean           @default(true)
+  createdById    String
+  createdAt      DateTime          @default(now())
+
+  orders MaintenanceOrder[]
+}
+
+/// Instandhaltungsauftrag: vorbeugend (aus Plan) oder Störung. OPEN → IN_PROGRESS → DONE; CANCELLED. Abgeschlossene sind unveränderlich.
+model MaintenanceOrder {
+  id             String            @id @default(cuid())
+  organizationId String
+  /// IH-2027-0001
+  number         String
+  objectId       String
+  object         MaintenanceObject @relation(fields: [objectId], references: [id])
+  planId         String?
+  plan           MaintenancePlan?  @relation(fields: [planId], references: [id])
+  /// PREVENTIVE | CORRECTIVE
+  kind           String
+  title          String
+  description    String?
+  /// LOW | NORMAL | HIGH | URGENT
+  priority       String            @default("NORMAL")
+  /// OPEN | IN_PROGRESS | DONE | CANCELLED
+  status         String            @default("OPEN")
+  dueOn          DateTime?         @db.Date
+  reportedById   String
+  createdAt      DateTime          @default(now())
+  startedAt      DateTime?
+  doneAt         DateTime?
+  doneOn         DateTime?         @db.Date
+  doneById       String?
+  report         String?
+  minutesSpent   Int?
+
+  parts MaintenancePart[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, objectId])
+}
+
+/// Verbrauchtes Ersatzteil eines Auftrags (Lagerbewegungen in `movementIds`). Append-only.
+model MaintenancePart {
+  id             String           @id @default(cuid())
+  organizationId String
+  orderId        String
+  order          MaintenanceOrder @relation(fields: [orderId], references: [id])
+  itemId         String
+  quantity       Decimal          @db.Decimal(19, 4)
+  movementIds    String[]
+  createdAt      DateTime         @default(now())
+
+  @@index([orderId])
+}
+
 // ───────── Fertigung: Stücklisten, Fertigungsaufträge ─────────
 
 /// Stückliste (Version je Artikel). DRAFT (bearbeitbar) → ACTIVE (Zeilen gesperrt; je Artikel höchstens eine aktive) → ARCHIVED.

@@ -93,6 +93,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Hauptbuch**
 `GlSettings` (Startdatum, Bankkonto), `AccountingPeriod`, `JournalEntry` (Nummer, Quelle, `sourceId` eindeutig je Quelle, `reversesId`) und `JournalLine` (Soll/Haben, Kostenstelle, Steuerkennzeichen, Steuerrolle). Append-only per Trigger; Soll = Haben je Satz per Constraint-Trigger; `Account.kind`, `TaxCode.vatAccountId/uvaBaseCode/uvaTaxCode`.
 
+**Qualität und Instandhaltung**
+`InspectionPlan`/`InspectionCharacteristic` (Version, aktive gesperrt), `Inspection`/`InspectionResult` (nach Entscheid per Trigger unveränderlich), `NonConformance`; `MaintenanceObject`, `MaintenancePlan`, `MaintenanceOrder` (abgeschlossene unveränderlich; je Plan höchstens ein offener Auftrag per Teilindex), `MaintenancePart` (append-only, verweist auf die Lagerbewegungen).
+
 **Fertigung**
 `Bom` (+`BomLine`; je Artikel eine aktive Version per Teilindex, Zeilen nach Aktivierung per Trigger gesperrt), `ProductionOrder`, `ProductionConfirmation` (unveränderlich, nur einmalige Rücknahme; verweist auf alle erzeugten Lagerbewegungen `PRODUCTION_ISSUE`/`PRODUCTION_RECEIPT`).
 
