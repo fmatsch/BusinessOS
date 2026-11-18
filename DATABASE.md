@@ -81,6 +81,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Spesen**
 `ExpenseReport` + `ExpenseLine` (Beleg über `FinanceFile`), `ExpenseSettings` (Kilometersatz). `Approval.expenseReportId` erweitert die Freigabe (CHECK: genau ein Bezug aus vier).
 
+**Lager**
+`Item` und `StockMovement` (Menge mit Vorzeichen; Art RECEIPT/ISSUE/ADJUST/REVERSAL; `goodsReceiptLineId` und `reversesId` eindeutig; per Trigger append-only).
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

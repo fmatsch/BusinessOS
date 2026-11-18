@@ -163,9 +163,15 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ Auszahlung vermerken (Finanzen); Sichtbarkeit: eigene, Team, alle (Finanzen/Inhaber); Belege nur für Berechtigte
 * ⚠️ Keine Vorsteuerberechnung, keine Tagegeld-/Nächtigungspauschalen, keine Fremdwährung; Auszahlung wird nur vermerkt (keine Überweisung, kein Bankabgleich, kein Export in Lohn/Buchhaltung); Spesen fließen nicht in das Budget „Ist“ ein
 
+## Lager (Inventar)
+* ✅ Artikel (Nummer, Bezeichnung, Einheit, Mindestbestand) und Bestand als Journal (`StockMovement`, append-only): Bestand = Summe der Bewegungen
+* ✅ Wareneingang einbuchen: jede Wareneingangsposition aus der Beschaffung höchstens einmal (eindeutig); Gegenbuchungen des Wareneingangs verringern den Bestand des ursprünglichen Artikels
+* ✅ Entnahme (optional mit Kostenstelle), Inventurkorrektur (gezählter Bestand → Differenz mit Begründung), Gegenbuchung; kein negativer Bestand, auch bei Parallelität (Zeilensperre je Artikel); Hinweis „nachbestellen“ unter dem Mindestbestand
+* ⚠️ Ein Lager (keine Lagerorte, Chargen, Seriennummern), keine Bewertung (Einstandspreise, gleitender Durchschnitt), kein automatischer Bezug von Bestellpositionen zu Artikeln (Zuordnung beim Einbuchen), keine Reservierungen, kein Lagerabgang aus Aufträgen/Projekten
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
 * ✅ Kundenabrechnung nach Stunden (M11, über Rechnungsentwurf)
-* ⬜ Inventar · Workflow-Designer · Analysen
+* ⬜ Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

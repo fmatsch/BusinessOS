@@ -1003,6 +1003,48 @@ model SupplierInvoiceLine {
   costCenterId     String?
 }
 
+// ───────── Lager: Artikel und Bestandsbewegungen ─────────
+
+/// Artikel. Ein Lager je Organisation (keine Lagerorte).
+model Item {
+  id             String   @id @default(cuid())
+  organizationId String
+  number         String
+  name           String
+  unit           String   @default("Stk")
+  /// Mindestbestand für den Hinweis „nachbestellen“
+  reorderLevel   Decimal? @db.Decimal(19, 4)
+  active         Boolean  @default(true)
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  movements StockMovement[]
+
+  @@unique([organizationId, number])
+}
+
+/// Bestandsbewegung (Menge mit Vorzeichen). Journal: unveränderlich (Trigger), Korrektur per Gegenbuchung. Bestand = Summe.
+model StockMovement {
+  id                 String         @id @default(cuid())
+  organizationId     String
+  itemId             String
+  item               Item           @relation(fields: [itemId], references: [id])
+  /// RECEIPT (Wareneingang) | ISSUE (Entnahme) | ADJUST (Inventurkorrektur) | REVERSAL (Gegenbuchung)
+  kind               String
+  quantity           Decimal        @db.Decimal(19, 4)
+  costCenterId       String?
+  /// jede Wareneingangsposition wird höchstens einmal eingebucht
+  goodsReceiptLineId String?        @unique
+  reversesId         String?        @unique
+  reverses           StockMovement? @relation("StockMovementReversal", fields: [reversesId], references: [id])
+  reversedBy         StockMovement? @relation("StockMovementReversal")
+  note               String?
+  createdById        String
+  createdAt          DateTime       @default(now())
+
+  @@index([organizationId, itemId, createdAt])
+}
+
 // ───────── Reisekosten und Spesen ─────────
 
 /// Einstellungen der Spesenabrechnung je Organisation (z. B. Kilometergeld je km)

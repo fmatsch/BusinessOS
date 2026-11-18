@@ -20,7 +20,7 @@ const NAV = [
   { href: "/expenses", key: "nav.expenses", live: true },
   { href: "/procurement", key: "nav.procurement", live: true },
   { href: "/suppliers", key: "nav.suppliers", live: true },
-  { href: "/planned/inventory", key: "nav.inventory" },
+  { href: "/inventory", key: "nav.inventory", live: true },
   { href: "/projects", key: "nav.projects", live: true },
   { href: "/crm", key: "nav.crm", live: true },
   { href: "/planned/workflows", key: "nav.workflows" },
