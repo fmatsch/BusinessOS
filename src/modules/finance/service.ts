@@ -382,7 +382,12 @@ export async function getSupplierInvoice(ctx: Ctx, id: string) {
 export async function createCustomerInvoice(ctx: Ctx, raw: unknown) {
   authorize(ctx, "finance.invoice.out.create");
   const input = customerInvoiceInput.parse(raw);
-  return db.$transaction(async (tx) => {
+  return db.$transaction((tx) => createCustomerInvoiceTx(tx, ctx, input));
+}
+
+/** Wie `createCustomerInvoice`, aber in einer vorhandenen Transaktion (Berechtigung und Eingabeprüfung macht der Aufrufer). */
+export async function createCustomerInvoiceTx(tx: Tx, ctx: Ctx, input: z.infer<typeof customerInvoiceInput>, origin?: { recurringId: string; recurringDate: string }) {
+  {
     const customer = await tx.customer.findFirst({ where: { id: input.customerId, organizationId: ctx.organizationId, active: true } });
     if (!customer) throw new NotFoundError("Kunde");
     if (input.kind === "CREDIT") {
@@ -401,12 +406,13 @@ export async function createCustomerInvoice(ctx: Ctx, raw: unknown) {
       data: {
         organizationId: ctx.organizationId, customerId: customer.id, invoiceDate: dateFromIso(input.invoiceDate), dueDate: dateFromIso(due), kind: input.kind, creditsId: input.creditsId ?? null,
         note: input.note ?? null, netTotal: tax.netTotal, taxTotal: tax.taxTotal, grossTotal: tax.grossTotal, createdById: ctx.userId,
+        recurringId: origin?.recurringId ?? null, recurringDate: origin ? dateFromIso(origin.recurringDate) : null,
         lines: { create: lines.map((l) => ({ description: l.description, quantity: l.quantity, unitPrice: l.unitPrice, netAmount: l.net, taxCodeId: l.taxCodeId, revenueAccountId: l.revenueAccountId ?? customer.revenueAccountId ?? "", costCenterId: l.costCenterId ?? null })) },
       },
     });
     await writeAudit(tx, ctx, { action: "customer_invoice.create", entityType: "CustomerInvoice", entityId: created.id, after: { customerId: customer.id, gross: tax.grossTotal.toString(), kind: input.kind } });
     return created;
-  });
+  }
 }
 
 /** Ausstellen vergibt die lückenlose Nummer und friert den Beleg ein. Korrekturen erfolgen nur noch per Gutschrift. */

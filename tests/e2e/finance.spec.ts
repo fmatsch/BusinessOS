@@ -202,6 +202,26 @@ test.describe.serial("Finanzen und Export an die Steuerberatung (Browser)", () =
     await logout(page);
   });
 
+  test("Wiederkehrende Rechnung: Vorlage anlegen, Entwurf erzeugen", async ({ page }) => {
+    await login(page, "admin");
+    await page.goto("/finance/recurring");
+    const f = page.locator("form").filter({ has: page.getByRole("button", { name: "Vorlage speichern" }) });
+    await f.locator('select[name="customerId"]').selectOption({ label: `${customerNo} ${customerName}` });
+    await f.getByLabel("Bezeichnung", { exact: true }).fill("Wartungsvertrag E2E");
+    await f.getByLabel("Erstes Rechnungsdatum").fill(today);
+    await f.getByLabel("Beschreibung 1").fill("Wartung");
+    await f.getByLabel("Menge 1").fill("1");
+    await f.getByLabel("Einzelpreis 1").fill("90");
+    await f.getByLabel("Steuerkennzeichen 1").selectOption({ label: `${taxOut} (20 %)` });
+    await f.getByRole("button", { name: "Vorlage speichern" }).click();
+    await expect(page.getByRole("cell", { name: "Wartungsvertrag E2E" })).toBeVisible();
+    await page.getByRole("button", { name: "Fällige Entwürfe erzeugen" }).click();
+    await expect(page.getByRole("status")).toContainText("Entwürfe erzeugt");
+    await page.goto("/finance/out");
+    await expect(page.getByRole("row").filter({ hasText: customerName }).filter({ hasText: "Entwurf" }).first()).toBeVisible();
+    await logout(page);
+  });
+
   test("Export im BMD-Format: Vorschau, Lauf, Buchungsdatei und Belegpaket", async ({ page }) => {
     await login(page, "admin");
     await setProfile(page, "BMD");

@@ -66,6 +66,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Mahnwesen**
 `DunningNotice` (Rechnung, Stufe 1–3, offener Betrag, Gebühr, Zahlungsfrist) – append-only per Trigger, je Rechnung und Stufe eindeutig. `AccountingProfile` um die Abgleich-Toleranz erweitert.
 
+**Wiederkehrende Rechnungen**
+`RecurringInvoice` (+ `RecurringInvoiceLine`): Rhythmus, Ankertag, nächster Lauf, Ende. `CustomerInvoice.recurringId/recurringDate` (eindeutig) verhindert doppelte Entwürfe je Termin.
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

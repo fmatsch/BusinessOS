@@ -6,6 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import { createRecurring, listRecurring, runRecurringInvoices, setRecurringActive } from "./finance/recurring-invoices";
 import { createDunningNotice, getDunningPdf, listOpenItems } from "./finance/receivables";
 import { acceptInvoiceVariance, getInvoiceMatch, approveSupplierInvoice, cancelCustomerInvoiceDraft, createAccount, createCustomer, createCustomerInvoice, createSupplierInvoice, createTaxCode, financeOverview, getAccountingProfile, getCustomerInvoice, getCustomerInvoicePdf, getIssuerProfile, setIssuerProfile, getFile, getSupplierInvoice, importAccounts, issueCustomerInvoice, listAccounts, listCustomerInvoices, listCustomers, listSupplierInvoices, listTaxCodes, markSupplierInvoicePaid, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, updateTaxMapping, uploadFile } from "./finance/service";
 import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./finance/export";
@@ -99,6 +100,10 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["listRecurring", "finance.invoice.read", () => listRecurring(none)],
+  ["createRecurring", "finance.recurring.manage", () => createRecurring(none, {})],
+  ["setRecurringActive", "finance.recurring.manage", () => setRecurringActive(none, "x", false)],
+  ["runRecurringInvoices", "finance.recurring.manage", () => runRecurringInvoices(none)],
   ["listOpenItems", "finance.invoice.read", () => listOpenItems(none)],
   ["getDunningPdf", "finance.invoice.read", () => getDunningPdf(none, "x")],
   ["createDunningNotice", "finance.dunning.create", () => createDunningNotice(none, { invoiceId: "x" })],

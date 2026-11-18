@@ -123,6 +123,8 @@ Entscheidung: kein eigenes Hauptbuch; die Steuerberatung bucht. Detailplan: [FIN
 * ✅ PDF für ausgestellte Ausgangsrechnungen und Gutschriften (`finance/invoice-pdf.ts`, ohne Zusatzbibliothek, reproduzierbar; Abruf `/finance/out/<id>/pdf`)
 * ✅ Aussteller-Stammdaten (`IssuerProfile`: Anschrift, UID, Firmenbuch, IBAN/BIC, Kontakt; IBAN-Prüfsumme) im Briefkopf und in der Fußzeile des PDFs; der Stand wird beim Ausstellen am Beleg festgehalten (`issuerSnapshot`), alte PDFs bleiben unverändert
 * ✅ Offene Posten und Mahnwesen: Alterung, drei Mahnstufen (Zahlungserinnerung, 1. und letzte Mahnung) mit Mindestabstand 14 Tage, Mahnung als PDF, manuelle Gebühr, unveränderlich (`finance/dunning.ts`, `receivables.ts`)
+* ✅ Wiederkehrende Rechnungen: Vorlagen (monatlich, vierteljährlich, jährlich, Ankertag, Enddatum, Pause); „Fällige Entwürfe erzeugen“ legt je Termin einen Entwurf an (höchstens 12 nachgeholt), idempotent und parallelsicher; ausgestellt wird nichts automatisch
+* ⚠️ Der Lauf startet nicht von selbst (kein Zeitplaner); Vorlagen ohne Preisanpassung/Index
 * ⚠️ Mahnwesen ohne Verzugszinsen, ohne Versand (PDF wird heruntergeladen), Fristen fest (7 Tage Zahlungsfrist)
 * ✅ Abgleich-Toleranz je Organisation einstellbar; Rollen-Sync für neue Berechtigungen (`npm run db:sync-roles`)
 * ⚠️ Kein Logo, keine Zahlungs-QR; vor Einführung der Stammdaten ausgestellte Rechnungen zeigen nur den Organisationsnamen · keine Fremdwährung · keine Bankanbindung · keine Verknüpfung Rechnung ↔ Budget

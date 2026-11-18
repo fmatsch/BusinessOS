@@ -13,6 +13,8 @@ import {
 } from "./service";
 import { createDunningNotice, getDunningPdf, listOpenItems } from "./receivables";
 import { addDaysIso } from "./dunning";
+import { addMonthsClamped } from "./recurring";
+import { createRecurring, listRecurring, runRecurringInvoices, setRecurringActive } from "./recurring-invoices";
 import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./export";
 
 const hasDb = !!process.env.DATABASE_URL;
@@ -95,7 +97,7 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
     const orgs = [orgA, orgB];
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.allow_journal_delete', 'on', true)`;
-      for (const m of ["accountingExport", "auditLog", "dunningNotice", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
+      for (const m of ["accountingExport", "auditLog", "dunningNotice", "recurringInvoice", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.user.deleteMany({ where: { id: { in: userIds } } });
@@ -437,6 +439,57 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
       expect(s).toContain("(Zahlungserinnerung)");
       expect(s).toContain(`zu Rechnung ${inv.number})`);
       expect(s).toContain("(127,50)"); // 120,00 offen + 7,50 Gebühr
+    });
+  });
+
+  describe("Wiederkehrende Rechnungen", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const day = Number(today.slice(8, 10));
+    const tpl = (extra: Record<string, unknown> = {}) => ({ customerId: ids.customer, title: "Wartung", interval: "MONTHLY", firstRunOn: addMonthsClamped(today, -3, day), lines: [{ description: "Wartung", quantity: "1", unitPrice: "100", taxCodeId: ids.ust20 }], ...extra });
+    const draftsOf = (id: string) => db.customerInvoice.findMany({ where: { recurringId: id }, orderBy: { recurringDate: "asc" } });
+
+    it("erzeugt fällige Entwürfe nachgeholt, nur Entwürfe, idempotent, parallel ohne Dubletten", async () => {
+      const t = await createRecurring(c.fin!, tpl());
+      const [r1, r2] = await Promise.all([runRecurringInvoices(c.fin!), runRecurringInvoices(c.fin2!)]);
+      const mine = [...r1.created, ...r2.created].filter((x) => x.templateId === t.id);
+      expect(mine).toHaveLength(4); // −3, −2, −1, 0 Monate – je Datum genau ein Entwurf
+      const drafts = await draftsOf(t.id);
+      expect(drafts).toHaveLength(4);
+      expect(drafts.every((x) => x.status === "DRAFT" && x.number === null && String(x.grossTotal) === "120")).toBe(true);
+      expect(drafts.map((x) => x.invoiceDate.toISOString().slice(0, 10))).toEqual([-3, -2, -1, 0].map((m) => addMonthsClamped(today, m, day)));
+      const after = await db.recurringInvoice.findUniqueOrThrow({ where: { id: t.id } });
+      expect(after.nextRunOn.toISOString().slice(0, 10)).toBe(addMonthsClamped(today, 1, day));
+      expect((await runRecurringInvoices(c.fin!)).created.filter((x) => x.templateId === t.id)).toHaveLength(0);
+      expect(await draftsOf(t.id)).toHaveLength(4);
+      expect((await listRecurring(c.fin!)).some((x) => x.id === t.id)).toBe(true);
+    });
+
+    it("Pause, Enddatum, Eingabeprüfung, Berechtigung und Mandantentrennung", async () => {
+      const paused = await createRecurring(c.fin!, tpl({ title: "pausiert" }));
+      await setRecurringActive(c.fin!, paused.id, false);
+      const ended = await createRecurring(c.fin!, tpl({ title: "begrenzt", endsOn: addMonthsClamped(today, -2, day) }));
+      const r = await runRecurringInvoices(c.fin!);
+      expect(r.created.filter((x) => x.templateId === paused.id)).toHaveLength(0);
+      expect(r.created.filter((x) => x.templateId === ended.id)).toHaveLength(2); // −3 und −2 Monate
+      expect(await db.customerInvoice.count({ where: { recurringId: ended.id } })).toBe(2);
+
+      await expect(createRecurring(c.fin!, tpl({ lines: [{ description: "x", quantity: "1", unitPrice: "1", taxCodeId: ids.vst20 }] }))).rejects.toBeInstanceOf(NotFoundError); // Vorsteuer
+      await expect(createRecurring(c.fin!, tpl({ endsOn: addMonthsClamped(today, -4, day) }))).rejects.toThrow(/Ende/);
+      await expect(createRecurring(c.emp!, tpl())).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(runRecurringInvoices(c.mgr!)).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(setRecurringActive(c.finB!, paused.id, true)).rejects.toBeInstanceOf(NotFoundError);
+      expect((await listRecurring(c.finB!)).length).toBe(0);
+    });
+
+    it("eine fehlerhafte Vorlage stoppt die anderen nicht und wird gemeldet", async () => {
+      const cust = await createCustomer(c.fin!, { number: "K-REC", name: "Kunde Rec" });
+      const bad = await createRecurring(c.fin!, tpl({ customerId: cust.id, title: "defekt" }));
+      const good = await createRecurring(c.fin!, tpl({ title: "gut", firstRunOn: today }));
+      await db.customer.update({ where: { id: cust.id }, data: { active: false } });
+      const r = await runRecurringInvoices(c.fin!);
+      expect(r.failed.map((f) => f.templateId)).toContain(bad.id);
+      expect(r.created.filter((x) => x.templateId === good.id)).toHaveLength(1);
+      expect(await draftsOf(bad.id)).toHaveLength(0);
     });
   });
 });

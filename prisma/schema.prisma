@@ -925,7 +925,8 @@ model Customer {
   active              Boolean  @default(true)
   createdAt           DateTime @default(now())
 
-  invoices CustomerInvoice[]
+  invoices  CustomerInvoice[]
+  recurring RecurringInvoice[]
 
   @@unique([organizationId, number])
 }
@@ -993,6 +994,42 @@ model SupplierInvoiceLine {
   costCenterId     String?
 }
 
+/// Vorlage für wiederkehrende Rechnungen. Erzeugt nur Entwürfe; das Ausstellen bleibt eine bewusste Handlung.
+model RecurringInvoice {
+  id             String    @id @default(cuid())
+  organizationId String
+  customerId     String
+  customer       Customer  @relation(fields: [customerId], references: [id])
+  title          String
+  /// MONTHLY | QUARTERLY | YEARLY
+  interval       String
+  /// Tag des Monats, an dem die Rechnung datiert wird (1–31; kurze Monate nehmen den letzten Tag)
+  anchorDay      Int
+  nextRunOn      DateTime  @db.Date
+  endsOn         DateTime? @db.Date
+  active         Boolean   @default(true)
+  note           String?
+  lastRunOn      DateTime? @db.Date
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  lines RecurringInvoiceLine[]
+
+  @@index([organizationId, active, nextRunOn])
+}
+
+model RecurringInvoiceLine {
+  id               String           @id @default(cuid())
+  templateId       String
+  template         RecurringInvoice @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  description      String
+  quantity         Decimal          @db.Decimal(19, 4)
+  unitPrice        Decimal          @db.Decimal(19, 4)
+  taxCodeId        String
+  revenueAccountId String?
+  costCenterId     String?
+}
+
 model CustomerInvoice {
   id             String    @id @default(cuid())
   organizationId String
@@ -1014,6 +1051,9 @@ model CustomerInvoice {
   note           String?
   /// Aussteller-Angaben zum Zeitpunkt des Ausstellens (damit das PDF später unverändert bleibt)
   issuerSnapshot Json?
+  /// Herkunft: Vorlage und Rechnungsdatum (verhindert doppelte Läufe)
+  recurringId    String?
+  recurringDate  DateTime? @db.Date
   createdById    String
   issuedById     String?
   issuedAt       DateTime?
@@ -1022,6 +1062,7 @@ model CustomerInvoice {
   lines CustomerInvoiceLine[]
 
   @@unique([organizationId, number])
+  @@unique([recurringId, recurringDate])
   @@index([organizationId, status])
 }
 

@@ -126,3 +126,13 @@ export const dunningInput = z.object({
   feeAmount: decimalString.refine((d) => d.gte(0) && d.lte(1000) && d.decimalPlaces() <= 2, "Gebühr: 0–1.000, höchstens 2 Nachkommastellen").default("0" as never),
   note: optText(300),
 });
+
+export const recurringInput = z.object({
+  customerId: z.string().min(1),
+  title: z.string().trim().min(1).max(120),
+  interval: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]),
+  firstRunOn: isoDate,
+  endsOn: optDate,
+  note: optText(300),
+  lines: z.array(customerLine).min(1).max(50),
+}).refine((v) => !v.endsOn || v.endsOn >= v.firstRunOn, { message: "Das Ende liegt vor dem ersten Lauf", path: ["endsOn"] });
