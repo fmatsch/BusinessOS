@@ -8,6 +8,7 @@ import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut,
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
 import * as payrun from "./payroll/run";
 import * as sales from "./sales/service";
+import * as prod from "./production/service";
 import { createAsset, disposeAsset, listAssets, runDepreciation } from "./gl/assets";
 import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, vatReturn, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
 import { exportReportCsv, listReports, runReport } from "./analytics/service";
@@ -111,6 +112,21 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["production.createBom", "production.bom.manage", () => prod.createBom(none, {})],
+  ["production.updateBom", "production.bom.manage", () => prod.updateBom(none, "x", {})],
+  ["production.activateBom", "production.bom.manage", () => prod.activateBom(none, "x")],
+  ["production.deleteBomDraft", "production.bom.manage", () => prod.deleteBomDraft(none, "x")],
+  ["production.listBoms", "production.read", () => prod.listBoms(none)],
+  ["production.getBom", "production.read", () => prod.getBom(none, "x")],
+  ["production.createProductionOrder", "production.order.manage", () => prod.createProductionOrder(none, {})],
+  ["production.releaseProductionOrder", "production.order.manage", () => prod.releaseProductionOrder(none, "x")],
+  ["production.cancelProductionOrder", "production.order.manage", () => prod.cancelProductionOrder(none, "x")],
+  ["production.completeProductionOrder", "production.order.manage", () => prod.completeProductionOrder(none, "x")],
+  ["production.listProductionOrders", "production.read", () => prod.listProductionOrders(none)],
+  ["production.getProductionOrder", "production.read", () => prod.getProductionOrder(none, "x")],
+  ["production.confirmProduction", "production.confirm", () => prod.confirmProduction(none, {})],
+  ["production.reverseConfirmation", "production.confirm", () => prod.reverseConfirmation(none, "x", "Grund")],
+  ["production.runMrp", "production.read", () => prod.runMrp(none)],
   ["sales.createOrder", "sales.order.manage", () => sales.createOrder(none, {})],
   ["sales.updateOrder", "sales.order.manage", () => sales.updateOrder(none, "x", {})],
   ["sales.confirmOrder", "sales.order.manage", () => sales.confirmOrder(none, "x")],

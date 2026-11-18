@@ -282,7 +282,7 @@ export async function issueStock(ctx: Ctx, raw: unknown) {
  * Entnahme in der Transaktion des Aufrufers (z. B. Lieferung im Vertrieb). Keine Berechtigungsprüfung – der Aufrufer prüft sein eigenes Recht.
  * Liefert alle geschriebenen Bewegungen (bei Seriennummern eine je Nummer).
  */
-export async function issueStockTx(tx: Tx, ctx: Ctx, raw: unknown) {
+export async function issueStockTx(tx: Tx, ctx: Ctx, raw: unknown, opts: { kind?: "ISSUE" | "PRODUCTION_ISSUE" } = {}) {
   const input = issueInput.parse(raw);
   {
     const item = await lockedItem(tx, ctx, input.itemId);
@@ -298,11 +298,34 @@ export async function issueStockTx(tx: Tx, ctx: Ctx, raw: unknown) {
       if (here.lt(quantity)) throw new ConflictError(`Nicht genug Bestand: vorhanden ${here.toString()} ${item.unit}, gewünscht ${quantity.toString()}`);
     }
     const onHand = (await stockOf(tx, ctx.organizationId, [item.id])).get(item.id)!;
-    const movements = await book(tx, ctx, item, { kind: "ISSUE", quantity: quantity.negated(), dim, serials, costCenterId: input.costCenterId, note: input.note });
+    const movements = await book(tx, ctx, item, { kind: opts.kind ?? "ISSUE", quantity: quantity.negated(), dim, serials, costCenterId: input.costCenterId, note: input.note });
     await writeAudit(tx, ctx, { action: "stock.issue", entityType: "StockMovement", entityId: movements[0]!.id, after: { item: item.number, quantity: quantity.toString(), costCenterId: input.costCenterId ?? null } });
     await emitIfBelowReorder(tx, ctx, item, onHand, onHand.minus(quantity));
     return { movements };
   }
+}
+
+/**
+ * Zugang aus der Fertigung in der Transaktion des Aufrufers (Berechtigung prüft der Aufrufer). Einstandspreis = Wert der verbrauchten Komponenten je Stück.
+ * Chargen werden bei Bedarf angelegt; bei Seriennummernartikeln sind die Nummern Pflicht (nie doppelt im Bestand).
+ */
+export async function receiveProductionTx(tx: Tx, ctx: Ctx, raw: { itemId: string; quantity: Decimal; locationId?: string | null; batchNumber?: string | null; expiresOn?: string | null; serials?: string[]; unitCost: Decimal; note?: string }) {
+  const item = await lockedItem(tx, ctx, raw.itemId);
+  if (!item.active) throw new ConflictError("Der Artikel ist deaktiviert");
+  const serials = checkSerials(item, raw.serials ?? [], raw.quantity);
+  for (const s of serials) if ((await serialSum(tx, ctx, item.id, s)).gt(0)) throw new ConflictError(`Seriennummer ${s} ist bereits im Bestand`);
+  const dim: Dim = { locationId: await resolveLocation(tx, ctx, raw.locationId, true), batchId: await resolveBatch(tx, ctx, item, raw.batchNumber, { expiresOn: raw.expiresOn }) };
+  const movements = await book(tx, ctx, item, { kind: "PRODUCTION_RECEIPT", quantity: raw.quantity, dim, serials, unitCost: raw.unitCost, note: raw.note });
+  await writeAudit(tx, ctx, { action: "stock.production_receipt", entityType: "StockMovement", entityId: movements[0]!.id, after: { item: item.number, quantity: raw.quantity.toString() } });
+  return { movements };
+}
+
+/** Wert (Betrag) der genannten Bewegungen eines Artikels nach dem Bewertungsverfahren des Artikels – für die Kalkulation in der Fertigung. */
+export async function movementsValueTx(tx: Tx, ctx: Ctx, itemId: string, movementIds: string[]): Promise<Decimal> {
+  const item = await tx.item.findFirst({ where: { id: itemId, organizationId: ctx.organizationId } });
+  if (!item) throw new NotFoundError("Artikel");
+  const v = await valuedMovements(tx, ctx.organizationId, item);
+  return v.movements.filter((m) => movementIds.includes(m.id)).reduce((s, m) => s.plus(m.value.abs()), d(0));
 }
 
 /** Umbuchung zwischen Lagerorten (Bestand insgesamt und Wert bleiben gleich). Beide Seiten tragen dieselbe Kennung. */

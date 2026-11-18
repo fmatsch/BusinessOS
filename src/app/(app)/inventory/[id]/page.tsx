@@ -10,7 +10,7 @@ import { ErrorBanner, runAction } from "../../action-helpers";
 
 export const dynamic = "force-dynamic";
 const here = (id: string) => `/inventory/${id}`;
-const KIND: Record<string, string> = { RECEIPT: "Wareneingang", ISSUE: "Entnahme", ADJUST: "Inventurkorrektur", REVERSAL: "Gegenbuchung", TRANSFER_OUT: "Umbuchung ab", TRANSFER_IN: "Umbuchung an" };
+const KIND: Record<string, string> = { RECEIPT: "Wareneingang", ISSUE: "Entnahme", ADJUST: "Inventurkorrektur", REVERSAL: "Gegenbuchung", TRANSFER_OUT: "Umbuchung ab", TRANSFER_IN: "Umbuchung an", PRODUCTION_ISSUE: "Verbrauch (Fertigung)", PRODUCTION_RECEIPT: "Zugang (Fertigung)" };
 const TRACK: Record<string, string> = { NONE: "ohne Verfolgung", BATCH: "Chargen", SERIAL: "Seriennummern" };
 const num = (v: FormDataEntryValue | null) => String(v ?? "").replace(",", ".");
 

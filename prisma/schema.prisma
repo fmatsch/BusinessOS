@@ -1079,6 +1079,86 @@ model JournalLine {
   @@index([entryId])
 }
 
+// ───────── Fertigung: Stücklisten, Fertigungsaufträge ─────────
+
+/// Stückliste (Version je Artikel). DRAFT (bearbeitbar) → ACTIVE (Zeilen gesperrt; je Artikel höchstens eine aktive) → ARCHIVED.
+model Bom {
+  id             String    @id @default(cuid())
+  organizationId String
+  itemId         String
+  version        Int
+  /// DRAFT | ACTIVE | ARCHIVED
+  status         String    @default("DRAFT")
+  /// Menge des Endprodukts, auf die sich die Zeilen beziehen
+  outputQuantity Decimal   @default(1) @db.Decimal(19, 4)
+  note           String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  activatedAt    DateTime?
+
+  lines  BomLine[]
+  orders ProductionOrder[]
+
+  @@unique([organizationId, itemId, version])
+}
+
+model BomLine {
+  id              String  @id @default(cuid())
+  bomId           String
+  bom             Bom     @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  componentItemId String
+  quantity        Decimal @db.Decimal(19, 4)
+  /// Ausschuss in Prozent (erhöht den Bedarf)
+  scrapPercent    Decimal @default(0) @db.Decimal(7, 2)
+}
+
+/// Fertigungsauftrag. DRAFT → RELEASED (Nummer FA) → COMPLETED; CANCELLED nur ohne Rückmeldung.
+model ProductionOrder {
+  id             String    @id @default(cuid())
+  organizationId String
+  number         String?
+  itemId         String
+  bomId          String
+  bom            Bom       @relation(fields: [bomId], references: [id])
+  quantity       Decimal   @db.Decimal(19, 4)
+  /// DRAFT | RELEASED | COMPLETED | CANCELLED
+  status         String    @default("DRAFT")
+  plannedDate    DateTime? @db.Date
+  note           String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  releasedAt     DateTime?
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+
+  confirmations ProductionConfirmation[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, itemId])
+}
+
+/// Rückmeldung: verbraucht die Komponenten und bucht das Endprodukt ins Lager. Unveränderlich; Korrektur = Rücknahme (Gegenbuchungen).
+model ProductionConfirmation {
+  id                  String          @id @default(cuid())
+  organizationId      String
+  orderId             String
+  order               ProductionOrder @relation(fields: [orderId], references: [id])
+  quantity            Decimal         @db.Decimal(19, 4)
+  componentLocationId String?
+  outputLocationId    String?
+  batchNumber         String?
+  serials             String?
+  /// alle erzeugten Lagerbewegungen (Verbrauch zuerst, dann Zugang)
+  movementIds         String[]
+  createdById         String
+  createdAt           DateTime        @default(now())
+  reversedAt          DateTime?
+  reversedById        String?
+  reverseReason       String?
+
+  @@index([orderId])
+}
+
 // ───────── Vertrieb: Aufträge, Lieferung, Versand ─────────
 
 /// Kundenauftrag. DRAFT (bearbeitbar) → CONFIRMED (Nummer, Positionen gesperrt) → CLOSED; CANCELLED nur ohne Lieferung.
@@ -1387,7 +1467,7 @@ model StockMovement {
   organizationId     String
   itemId             String
   item               Item           @relation(fields: [itemId], references: [id])
-  /// RECEIPT (Wareneingang) | ISSUE (Entnahme) | ADJUST (Inventurkorrektur) | REVERSAL (Gegenbuchung) | TRANSFER_OUT / TRANSFER_IN (Umbuchung zwischen Lagerorten)
+  /// RECEIPT (Wareneingang) | ISSUE (Entnahme) | ADJUST (Inventurkorrektur) | REVERSAL (Gegenbuchung) | TRANSFER_OUT / TRANSFER_IN (Umbuchung zwischen Lagerorten) | PRODUCTION_ISSUE / PRODUCTION_RECEIPT (Fertigung)
   kind               String
   quantity           Decimal        @db.Decimal(19, 4)
   /// Lagerort; leer = „ohne Lagerort“ (Bestand vor Einführung der Lagerorte)
