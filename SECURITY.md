@@ -19,7 +19,7 @@
 | Secrets | nur über Umgebungsvariablen, nie im Browser-Bundle (kein `NEXT_PUBLIC_` für Schlüssel), `.env` ist ignoriert |
 | Fehler | generische Meldungen an Clients, Details nur im Server-Log |
 | Uploads | Typ- und Größenprüfung, Speicherung außerhalb des Webroots (Phase später) |
-| KI | nur Tools, kein freies SQL, Bestätigung bei Änderungen, Dokumentinhalte als nicht vertrauenswürdig |
+| KI | nur lesende Tools mit Benutzerkontext, kein freies SQL, Werkzeugdaten als `<untrusted_data>` gekapselt, Quellen serverseitig, Audit jeder Aktion, Rate-Limit; Schreibzugriffe gibt es nicht (später nur mit Bestätigung) |
 | DSGVO | Datenminimierung, Löschkonzept für personenbezogene Daten, Auskunftsfähigkeit über Audit-Log |
 | Demo-Daten | ausschließlich synthetisch |
 

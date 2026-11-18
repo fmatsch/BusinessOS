@@ -56,3 +56,30 @@ export async function setBudget(ctx: Ctx, raw: unknown) {
     return saved;
   });
 }
+
+export interface DepartmentSpend {
+  departmentId: string | null;
+  department: string;
+  committed: Decimal;
+  orderCount: number;
+}
+
+/** Gebundene Beträge je Abteilung (über die Kostenstelle der Bestellung), absteigend sortiert. */
+export async function committedByDepartment(ctx: Ctx, year: number): Promise<DepartmentSpend[]> {
+  authorize(ctx, "finance.budget.read");
+  const range = fiscalYearRange(year);
+  const orders = await db.purchaseOrder.findMany({
+    where: { organizationId: ctx.organizationId, status: { not: "CANCELLED" }, createdAt: { gte: range.from, lt: range.to } },
+    select: { totalAmount: true, costCenter: { select: { department: { select: { id: true, name: true } } } } },
+  });
+  const map = new Map<string, DepartmentSpend>();
+  for (const o of orders) {
+    const d = o.costCenter.department;
+    const key = d?.id ?? "none";
+    const row = map.get(key) ?? { departmentId: d?.id ?? null, department: d?.name ?? "(ohne Abteilung)", committed: new Decimal(0), orderCount: 0 };
+    row.committed = row.committed.plus(o.totalAmount.toString());
+    row.orderCount += 1;
+    map.set(key, row);
+  }
+  return [...map.values()].sort((a, b) => b.committed.comparedTo(a.committed));
+}

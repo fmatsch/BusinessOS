@@ -25,9 +25,16 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⚠️ Über-Budget-Bestellungen werden zugelassen (nur Warnung), kein Sperr-Workflow
 * ⚠️ Neue Seiten haben deutsche Texte direkt im Code, nicht über i18n
 
-## Phase 4 – KI
-* ⬜ Provider-Abstraktion, Claude-Anbindung
-* ⬜ Lesende, berechtigungsgeprüfte Tools mit Quellenangabe
+## Phase 4 – KI (lesend)
+* ✅ Anbieterunabhängige Schnittstelle (`platform/ai/provider.ts`), Claude als erster Anbieter (Standardmodell `claude-opus-5-5`, per `AI_MODEL` änderbar)
+* ✅ 8 nur lesende, berechtigungsgeprüfte Werkzeuge (Anforderungen, Freigaben, Budgets, Abteilungsvolumen, Lieferanten, Kostenstellen, Abteilungen) – kein freies SQL, kein Service-Konto
+* ✅ Quellen werden serverseitig aus Werkzeugergebnissen abgeleitet, nicht vom Modell behauptet
+* ✅ Jede Frage, jeder Werkzeugaufruf und jede Antwort im Audit-Log (`actorType = AI`, im Auftrag des Benutzers)
+* ✅ Prompt-Injection: Daten als `<untrusted_data>` gekapselt, Strings gekürzt, keine Schreib-Werkzeuge vorhanden, nicht angebotene Werkzeuge werden abgelehnt (Tests)
+* ✅ Rate-Limit 20 Fragen/Stunde/Benutzer, max. 6 Werkzeugschritte pro Frage
+* ⚠️ **Nicht gegen die echte Claude-API verifiziert** (kein API-Schlüssel hinterlegt): getestet mit Fake-Anbieter und Attrappe des SDK-Clients
+* ⚠️ Kein Gesprächsverlauf (jede Frage einzeln); keine Streaming-Ausgabe; keine Fragen zu Rechnungen/Personal/Lager/CRM (Module fehlen)
+* ⬜ Schreibende Werkzeuge nur als Vorschlag mit Bestätigung durch den Benutzer
 
 ## Phase 5 – Tests & Härtung
 * ⬜ Unit-, Integrations-, E2E-Tests, Tenant-Isolation, Autorisierung, Finanzkonsistenz, Barrierefreiheit

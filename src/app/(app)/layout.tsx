@@ -18,7 +18,7 @@ const NAV = [
   { href: "/planned/crm", key: "nav.crm" },
   { href: "/planned/workflows", key: "nav.workflows" },
   { href: "/planned/analytics", key: "nav.analytics" },
-  { href: "/planned/copilot", key: "nav.copilot" },
+  { href: "/copilot", key: "nav.copilot", live: true },
   { href: "/audit", key: "nav.audit", live: true },
 ] as const;
 
