@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { Decimal } from "@/lib/money";
 import { authorize, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
+import { emitEvent } from "@/platform/events/emit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { receiptLinesForStock } from "@/modules/procurement/queries";
 import { adjustInput, issueInput, itemInput, itemUpdateInput, stockReceiptInput } from "./schema";
@@ -107,6 +108,13 @@ export async function stockReceiptLine(ctx: Ctx, raw: unknown) {
   });
 }
 
+/** Meldet „Mindestbestand unterschritten“, wenn eine Bewegung den Bestand erstmals auf oder unter den Mindestbestand bringt. */
+async function emitIfBelowReorder(tx: Tx, ctx: Ctx, item: { id: string; number: string; reorderLevel: Prisma.Decimal | null }, before: Decimal, after: Decimal) {
+  if (item.reorderLevel === null) return;
+  const level = d(item.reorderLevel.toString());
+  if (before.gt(level) && after.lte(level)) await emitEvent(tx, ctx, "stock.below_reorder", { itemId: item.id, item: item.number, onHand: after.toString(), reorderLevel: level.toString(), href: `/inventory/${item.id}` });
+}
+
 // ───────────────────────── Entnahme, Inventur, Korrektur ─────────────────────────
 
 export async function issueStock(ctx: Ctx, raw: unknown) {
@@ -119,6 +127,7 @@ export async function issueStock(ctx: Ctx, raw: unknown) {
     if (onHand.lt(input.quantity)) throw new ConflictError(`Nicht genug Bestand: vorhanden ${onHand.toString()} ${item.unit}, gewünscht ${input.quantity.toString()}`);
     const m = await tx.stockMovement.create({ data: { organizationId: ctx.organizationId, itemId: item.id, kind: "ISSUE", quantity: input.quantity.negated().toString(), costCenterId: input.costCenterId ?? null, note: input.note ?? null, createdById: ctx.userId } });
     await writeAudit(tx, ctx, { action: "stock.issue", entityType: "StockMovement", entityId: m.id, after: { item: item.number, quantity: input.quantity.toString(), costCenterId: input.costCenterId ?? null } });
+    await emitIfBelowReorder(tx, ctx, item, onHand, onHand.minus(input.quantity));
     return m;
   });
 }
@@ -134,6 +143,7 @@ export async function adjustStock(ctx: Ctx, raw: unknown) {
     if (diff.isZero()) throw new ConflictError("Der gezählte Bestand entspricht dem Buchbestand – nichts zu korrigieren");
     const m = await tx.stockMovement.create({ data: { organizationId: ctx.organizationId, itemId: item.id, kind: "ADJUST", quantity: diff.toString(), note: input.reason, createdById: ctx.userId } });
     await writeAudit(tx, ctx, { action: "stock.adjust", entityType: "StockMovement", entityId: m.id, after: { item: item.number, from: onHand.toString(), to: input.counted.toString(), reason: input.reason } });
+    await emitIfBelowReorder(tx, ctx, item, onHand, input.counted);
     return m;
   });
 }

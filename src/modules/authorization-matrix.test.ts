@@ -6,6 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import { listWorkflowRuns, listWorkflows, publishWorkflow, setWorkflowEnabled, workflowHistory } from "./workflows/service";
 import { adjustStock, createItem, getItem, issueStock, listItems, listStockableReceiptLines, reverseMovement, stockReceiptLine, updateItem } from "./inventory/service";
 import { addExpenseLine, cancelExpenseReport, createExpenseReport, decideExpenseReport, getExpenseReceipt, getExpenseReport, listExpenseReports, listPendingExpenseApprovals, markExpensePaid, removeExpenseLine, setMileageRate, submitExpenseReport } from "./expenses/service";
 import { acceptExactSuggestions, candidatesForLine, ignoreBankLine, importBankStatement, listBankLines, matchBankLine, reopenBankLine, unmatchBankLine } from "./finance/bank-service";
@@ -105,6 +106,11 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["listWorkflows", "workflow.read", () => listWorkflows(none)],
+  ["workflowHistory", "workflow.read", () => workflowHistory(none, "x")],
+  ["listWorkflowRuns", "workflow.read", () => listWorkflowRuns(none)],
+  ["publishWorkflow", "workflow.manage", () => publishWorkflow(none, {})],
+  ["setWorkflowEnabled", "workflow.manage", () => setWorkflowEnabled(none, "x", true)],
   ["listItems", "inventory.read", () => listItems(none)],
   ["getItem", "inventory.read", () => getItem(none, "x")],
   ["createItem", "inventory.manage", () => createItem(none, { number: "A1", name: "x" })],

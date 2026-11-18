@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { Decimal } from "@/lib/money";
 import { authorize, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
+import { emitEvent } from "@/platform/events/emit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { isoFromDate } from "@/modules/hr/queries";
 import { addDaysIso, bucketOf, daysBetween, nextDunning, PAYMENT_DAYS, type AgeBucket } from "./dunning";
@@ -67,6 +68,7 @@ export async function createDunningNotice(ctx: Ctx, raw: unknown, today = todayI
       data: { organizationId: ctx.organizationId, invoiceId: inv.id, level: next.level, issuedOn: new Date(`${today}T00:00:00Z`), openAmount: open.toFixed(4), feeAmount: input.feeAmount.toString(), payByDate: new Date(`${payBy}T00:00:00Z`), note: input.note ?? null, createdById: ctx.userId },
     });
     await writeAudit(tx, ctx, { action: "dunning.create", entityType: "DunningNotice", entityId: created.id, after: { invoice: inv.number, level: next.level, open: open.toString(), fee: input.feeAmount.toString() } as unknown as Prisma.InputJsonValue });
+    await emitEvent(tx, ctx, "dunning.created", { invoiceId: inv.id, invoiceNumber: inv.number ?? "", level: next.level, open: open.toFixed(2), href: `/finance/out/${inv.id}` });
     return created;
   });
 }

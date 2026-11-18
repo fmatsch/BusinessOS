@@ -72,7 +72,7 @@ describe.skipIf(!hasDb)("CRM: Kontakte, Aktivitäten, Angebote", () => {
     const orgs = [orgA, orgB];
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.allow_journal_delete', 'on', true)`;
-      for (const m of ["auditLog", "approvalPolicy", "quote", "activity", "contact", "customerInvoice", "issuerProfile", "customer", "taxCode", "account", "sequence"] as const)
+      for (const m of ["outboxEvent", "auditLog", "approvalPolicy", "quote", "activity", "contact", "customerInvoice", "issuerProfile", "customer", "taxCode", "account", "sequence"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.user.deleteMany({ where: { id: { in: userIds } } });

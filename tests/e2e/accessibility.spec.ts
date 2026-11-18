@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { login } from "./helpers";
 
 // Automatische WCAG-2-A/AA-Prüfung (axe-core). Deckt nur einen Teil der Barrierefreiheit ab – ersetzt keinen manuellen Test.
-const pages = ["/", "/departments", "/cost-centers", "/budgets", "/suppliers", "/procurement", "/audit", "/copilot", "/notifications", "/settings/approvals", "/hr", "/absences", "/roster", "/roster/settings", "/time", "/time/team", "/payroll", "/finance", "/finance/in", "/finance/out", "/crm", "/crm/quotes", "/projects", "/expenses", "/inventory", "/inventory/receipts", "/finance/bank", "/finance/receivables", "/finance/recurring", "/finance/export", "/finance/settings", "/planned/finance"];
+const pages = ["/", "/departments", "/cost-centers", "/budgets", "/suppliers", "/procurement", "/audit", "/copilot", "/notifications", "/settings/approvals", "/hr", "/absences", "/roster", "/roster/settings", "/time", "/time/team", "/payroll", "/finance", "/finance/in", "/finance/out", "/crm", "/crm/quotes", "/projects", "/workflows", "/expenses", "/inventory", "/inventory/receipts", "/finance/bank", "/finance/receivables", "/finance/recurring", "/finance/export", "/finance/settings", "/planned/finance"];
 
 async function scan(page: Page) {
   const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();

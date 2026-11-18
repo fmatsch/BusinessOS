@@ -4,6 +4,7 @@ import { Decimal } from "@/lib/money";
 import { authorize, type Ctx } from "@/platform/authz/authorize";
 import type { Permission } from "@/platform/authz/permissions";
 import { writeAudit } from "@/platform/audit/audit";
+import { emitEvent } from "@/platform/events/emit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { stepsFor } from "@/platform/approvals/engine";
 import { getActivePolicy, QUOTE } from "@/platform/approvals/policy";
@@ -181,6 +182,7 @@ export async function sendQuote(ctx: Ctx, id: string) {
     const issuer = await getIssuerProfile(ctx, tx);
     await tx.quote.update({ where: { id }, data: { status: "SENT", number, sentAt: new Date(), issuerSnapshot: (issuer ?? undefined) as unknown as Prisma.InputJsonValue | undefined } });
     await writeAudit(tx, ctx, { action: "quote.send", entityType: "Quote", entityId: id, after: { number, gross: q.grossTotal.toString() } });
+    await emitEvent(tx, ctx, "quote.sent", { quoteId: id, number, gross: q.grossTotal.toString(), href: `/crm/quotes/${id}` });
     return number;
   });
 }
@@ -200,6 +202,7 @@ export async function acceptQuote(ctx: Ctx, id: string) {
     });
     await tx.quote.update({ where: { id }, data: { status: "ACCEPTED", decidedAt: new Date(), decidedById: ctx.userId, invoiceId: inv.id } });
     await writeAudit(tx, ctx, { action: "quote.accept", entityType: "Quote", entityId: id, after: { number: q.number, invoiceId: inv.id } });
+    await emitEvent(tx, ctx, "quote.accepted", { quoteId: id, number: q.number ?? "", gross: q.grossTotal.toString(), href: `/crm/quotes/${id}` });
     return { invoiceId: inv.id };
   });
 }

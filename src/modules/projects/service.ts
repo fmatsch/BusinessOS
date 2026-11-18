@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { Decimal } from "@/lib/money";
 import { authorize, can, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
+import { emitEvent } from "@/platform/events/emit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { dateFromIso, employeeBasics, employeeByUser, isoFromDate } from "@/modules/hr/queries";
 import { createCustomerInvoiceDraftTx } from "@/modules/finance/service";
@@ -183,6 +184,7 @@ export async function billProject(ctx: Ctx, raw: unknown) {
       data: { organizationId: ctx.organizationId, projectId: p.id, invoiceId: inv.id, upTo: dateFromIso(input.upTo), minutes, hourlyRate: rate, netAmount: net.toString(), createdById: ctx.userId, items: { create: open.map((t) => ({ timeId: t.id })) } },
     });
     await writeAudit(tx, ctx, { action: "project.bill", entityType: "ProjectBilling", entityId: billing.id, after: { project: p.number, minutes, net: net.toString(), invoiceId: inv.id } });
+    await emitEvent(tx, ctx, "project.billed", { projectId: p.id, project: p.number, minutes, net: net.toString(), href: `/projects/${p.id}` });
     return { invoiceId: inv.id, billingId: billing.id, minutes, net };
   });
 }

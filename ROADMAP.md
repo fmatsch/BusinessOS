@@ -171,9 +171,16 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ Entnahme (optional mit Kostenstelle), Inventurkorrektur (gezählter Bestand → Differenz mit Begründung), Gegenbuchung; kein negativer Bestand, auch bei Parallelität (Zeilensperre je Artikel); Hinweis „nachbestellen“ unter dem Mindestbestand
 * ⚠️ Ein Lager (keine Lagerorte, Chargen, Seriennummern), keine Bewertung (Einstandspreise, gleitender Durchschnitt), kein automatischer Bezug von Bestellpositionen zu Artikeln (Zuordnung beim Einbuchen), keine Reservierungen, kein Lagerabgang aus Aufträgen/Projekten
 
+## Workflows (versionierte Regeln)
+* ✅ Regeln „Ereignis → Bedingungen → Benachrichtigung“ (Ereigniskatalog mit 20 Ereignissen, darunter neu: Rechnung ausgestellt/bezahlt, Eingangsrechnung freigegeben, Mahnung, Angebot versendet/angenommen, Spesen eingereicht/freigegeben/abgelehnt, Projekt abgerechnet, Mindestbestand unterschritten)
+* ✅ Bedingungen (bis 5, UND) auf deklarierte Felder: Zahlen exakt (Decimal), Text ohne Groß-/Kleinschreibung; Empfänger: Personen mit einer Berechtigung oder die auslösende Person; Textvorlagen mit `{{feld}}` (nur deklarierte Felder, nur Text, nur interne Links)
+* ✅ Versioniert: jede Änderung und jedes Ein-/Ausschalten ist eine neue Version, frühere bleiben unverändert; Protokoll nennt die ausgelöste Version; idempotent (je Regelversion und Ereignis ein Eintrag), liest nur innerhalb der Organisation des Ereignisses
+* ✅ Berechtigungen: `workflow.manage` (Inhaber), `workflow.read` (Finanzen, Inhaber)
+* ⚠️ Workflows können nur in der Anwendung benachrichtigen: keine Datenänderungen, keine Webhooks/E-Mails, keine Verzweigungen oder Wartezeiten; ältere Ereignisse (Beschaffung, Personal, Dienstplan, Zeit) tragen nur Kennungen und lassen sich nicht filtern; Ereignisse werden vom Worker verarbeitet (`npm run worker` muss laufen)
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
 * ✅ Kundenabrechnung nach Stunden (M11, über Rechnungsentwurf)
-* ⬜ Workflow-Designer · Analysen
+* ⬜ Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

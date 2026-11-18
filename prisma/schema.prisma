@@ -1003,6 +1003,47 @@ model SupplierInvoiceLine {
   costCenterId     String?
 }
 
+// ───────── Workflows: versionierte Regeln (Ereignis → Bedingungen → Benachrichtigung) ─────────
+
+/// Eine Version einer Workflow-Regel. Veröffentlichte Versionen werden nie geändert; es gilt die höchste Version je Schlüssel.
+model WorkflowDefinition {
+  id             String   @id @default(cuid())
+  organizationId String
+  key            String
+  version        Int
+  name           String
+  eventType      String
+  /// [{ field, op, value }] – alle müssen zutreffen
+  conditions     Json
+  /// [{ type: "NOTIFY", recipient, title, body? }]
+  actions        Json
+  enabled        Boolean  @default(true)
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  runs WorkflowRun[]
+
+  @@unique([organizationId, key, version])
+  @@index([organizationId, eventType])
+}
+
+/// Protokoll: welches Ereignis hat welche Regelversion ausgelöst. Je Regelversion und Ereignis höchstens ein Eintrag (Idempotenz).
+model WorkflowRun {
+  id              String             @id @default(cuid())
+  organizationId  String
+  definitionId    String
+  definition      WorkflowDefinition @relation(fields: [definitionId], references: [id])
+  eventId         String
+  eventType       String
+  /// Bedingungen erfüllt und Aktionen ausgeführt?
+  matched         Boolean
+  notifications   Int                @default(0)
+  createdAt       DateTime           @default(now())
+
+  @@unique([definitionId, eventId])
+  @@index([organizationId, createdAt])
+}
+
 // ───────── KI-Copilot: Vorschläge mit Bestätigung ─────────
 
 /// Änderung, die der Copilot vorschlägt. Ausgeführt wird sie nur, wenn dieselbe Person sie bestätigt – mit deren Berechtigungen.

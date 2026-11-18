@@ -62,7 +62,7 @@ describe.skipIf(!hasDb)("Projekte: Stunden buchen und abrechnen", () => {
       await tx.projectBilling.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.projectTime.deleteMany({ where: { organizationId: { in: orgs }, kind: "REVERSAL" } });
       await tx.projectTime.deleteMany({ where: { organizationId: { in: orgs } } });
-      for (const m of ["auditLog", "project", "customerInvoice", "customer", "taxCode", "account", "sequence", "employee"] as const)
+      for (const m of ["outboxEvent", "auditLog", "project", "customerInvoice", "customer", "taxCode", "account", "sequence", "employee"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.user.deleteMany({ where: { id: { in: userIds } } });

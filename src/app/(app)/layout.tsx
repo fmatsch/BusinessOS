@@ -23,7 +23,7 @@ const NAV = [
   { href: "/inventory", key: "nav.inventory", live: true },
   { href: "/projects", key: "nav.projects", live: true },
   { href: "/crm", key: "nav.crm", live: true },
-  { href: "/planned/workflows", key: "nav.workflows" },
+  { href: "/workflows", key: "nav.workflows", live: true },
   { href: "/planned/analytics", key: "nav.analytics" },
   { href: "/copilot", key: "nav.copilot", live: true },
   { href: "/audit", key: "nav.audit", live: true },

@@ -61,7 +61,7 @@ describe.skipIf(!hasDb)("Spesenabrechnung", () => {
     const orgs = [orgA, orgB];
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.allow_journal_delete', 'on', true)`;
-      for (const m of ["auditLog", "expenseReport", "expenseSettings", "approvalPolicy", "financeFile", "sequence"] as const)
+      for (const m of ["outboxEvent", "auditLog", "expenseReport", "expenseSettings", "approvalPolicy", "financeFile", "sequence"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.employee.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });

@@ -4,6 +4,7 @@ import { Decimal } from "@/lib/money";
 import { authorize, can, ForbiddenError, type Ctx } from "@/platform/authz/authorize";
 import type { Permission } from "@/platform/authz/permissions";
 import { writeAudit } from "@/platform/audit/audit";
+import { emitEvent } from "@/platform/events/emit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { stepsFor } from "@/platform/approvals/engine";
 import { EXPENSE_REPORT, getActivePolicy } from "@/platform/approvals/policy";
@@ -135,6 +136,7 @@ export async function submitExpenseReport(ctx: Ctx, id: string) {
       where: { id }, data: { status: "SUBMITTED", number, submittedAt: new Date(), policyVersion: policy.version, approvals: { create: steps.map((s, i) => ({ organizationId: ctx.organizationId, stepKey: s.key, label: s.label, requiredPermission: s.permission, sequence: i + 1 })) } },
     });
     await writeAudit(tx, ctx, { action: "expense.submit", entityType: "ExpenseReport", entityId: id, after: { number, total: r.totalAmount.toString(), steps: steps.map((s) => s.key) } });
+    await emitEvent(tx, ctx, "expense.submitted", { reportId: id, number, total: r.totalAmount.toString(), href: `/expenses/${id}` });
     return number;
   });
 }
@@ -176,6 +178,7 @@ export async function decideExpenseReport(ctx: Ctx, raw: unknown) {
     const next: ExpenseStatus = !approve ? "REJECTED" : remaining === 0 ? "APPROVED" : "SUBMITTED";
     if (next !== "SUBMITTED") await tx.expenseReport.update({ where: { id: r.id }, data: { status: next, decidedAt: new Date() } });
     await writeAudit(tx, ctx, { action: approve ? "expense.approve_step" : "expense.reject", entityType: "ExpenseReport", entityId: r.id, after: { step: step.stepKey, status: next, comment: input.comment ?? null } });
+    if (next === "APPROVED" || next === "REJECTED") await emitEvent(tx, ctx, next === "APPROVED" ? "expense.approved" : "expense.rejected", { reportId: r.id, number: r.number ?? "", total: r.totalAmount.toString(), href: `/expenses/${r.id}` });
     return { status: next };
   });
 }

@@ -98,7 +98,7 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
     const orgs = [orgA, orgB];
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.allow_journal_delete', 'on', true)`;
-      for (const m of ["accountingExport", "auditLog", "dunningNotice", "bankLine", "bankImport", "recurringInvoice", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
+      for (const m of ["accountingExport", "outboxEvent", "auditLog", "dunningNotice", "bankLine", "bankImport", "recurringInvoice", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.user.deleteMany({ where: { id: { in: userIds } } });

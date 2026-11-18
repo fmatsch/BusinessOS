@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { Decimal } from "@/lib/money";
 import { authorize, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
+import { emitEvent } from "@/platform/events/emit";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { dateFromIso, isoFromDate, addDays } from "@/modules/hr/queries";
 import { receivingOf } from "@/modules/procurement/queries";
@@ -348,6 +349,7 @@ export async function approveSupplierInvoice(ctx: Ctx, id: string) {
     const claimed = await tx.supplierInvoice.updateMany({ where: { id, status: "DRAFT" }, data: { status: "APPROVED", approvedById: ctx.userId, approvedAt: new Date(), voucherNumber: await nextNumber(tx, ctx.organizationId, "ER", inv.invoiceDate.getUTCFullYear()) } });
     if (claimed.count !== 1) throw new ConflictError("Der Beleg wurde bereits bearbeitet");
     await writeAudit(tx, ctx, { action: "supplier_invoice.approve", entityType: "SupplierInvoice", entityId: id });
+    await emitEvent(tx, ctx, "supplier_invoice.approved", { invoiceId: id, invoiceNumber: inv.invoiceNumber, gross: inv.grossTotal.toString(), href: `/finance/in/${id}` });
   });
 }
 
@@ -469,6 +471,7 @@ export async function issueCustomerInvoice(ctx: Ctx, id: string) {
     const issuer = await getIssuerProfile(ctx, tx);
     await tx.customerInvoice.update({ where: { id }, data: { number, issuerSnapshot: (issuer ?? undefined) as unknown as Prisma.InputJsonValue | undefined } });
     await writeAudit(tx, ctx, { action: "customer_invoice.issue", entityType: "CustomerInvoice", entityId: id, after: { number, gross: inv.grossTotal.toString() } });
+    await emitEvent(tx, ctx, "customer_invoice.issued", { invoiceId: id, number, gross: inv.grossTotal.toString(), href: `/finance/out/${id}` });
     return number;
   });
 }
@@ -504,6 +507,7 @@ export async function payCustomerInvoiceTx(tx: Tx, ctx: Ctx, id: string, paidOn:
   const r = await tx.customerInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, status: "ISSUED", paidOn: null }, data: { paidOn: dateFromIso(paidOn) } });
   if (r.count !== 1) throw new ConflictError("Nur ausgestellte, noch nicht bezahlte Rechnungen können als bezahlt markiert werden");
   await writeAudit(tx, ctx, { action: "customer_invoice.paid", entityType: "CustomerInvoice", entityId: id, after: { paidOn, ...via } });
+  await emitEvent(tx, ctx, "customer_invoice.paid", { invoiceId: id, paidOn, href: `/finance/out/${id}` });
 }
 
 export async function unpayCustomerInvoiceTx(tx: Tx, ctx: Ctx, id: string, via?: Record<string, string>) {

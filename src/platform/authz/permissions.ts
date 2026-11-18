@@ -77,6 +77,9 @@ export const PERMISSIONS = [
   "inventory.read",
   "inventory.manage",
   "inventory.move",
+  "workflow.read",
+  "workflow.manage",
+  "analytics.read",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -129,6 +132,8 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "inventory.read",
       "inventory.manage",
       "inventory.move",
+      "workflow.read",
+      "analytics.read",
       "project.read",
       "project.manage",
       "project.time.book",
@@ -206,6 +211,7 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "expense.approve",
       "inventory.read",
       "inventory.move",
+      "analytics.read",
       "project.read",
       "project.manage",
       "project.time.book",

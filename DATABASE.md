@@ -87,6 +87,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Copilot**
 `CopilotProposal` (Person, Werkzeug, geprüfte Eingabe, vom Server gebildete Beschreibung, Status PENDING/EXECUTED/FAILED/REJECTED/EXPIRED).
 
+**Workflows**
+`WorkflowDefinition` (Schlüssel + Version eindeutig; Ereignis, Bedingungen, Aktionen als JSON; veröffentlichte Versionen werden nie geändert) und `WorkflowRun` (je Regelversion und Ereignis eindeutig).
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 
