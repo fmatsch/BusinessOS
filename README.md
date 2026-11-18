@@ -14,6 +14,7 @@ Sprache der Oberfläche: Deutsch (Standard) und Englisch.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Architektur, Modulgrenzen, Mandantenfähigkeit, Events, KI |
 | [DATABASE.md](DATABASE.md) | Datenmodell und Konventionen |
 | [ROADMAP.md](ROADMAP.md) | Meilensteine und Risiken |
+| [MODULES.md](MODULES.md) | Plan für Dienstplanung, Zeiterfassung, Abrechnung und weitere Module |
 | [SECURITY.md](SECURITY.md) | Sicherheitskonzept |
 | [CLAUDE.md](CLAUDE.md) | Konventionen für künftige Claude-Code-Sitzungen |
 

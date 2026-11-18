@@ -51,4 +51,9 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⚠️ CSP erlaubt `'unsafe-inline'` für Skripte (Next.js ohne Nonce)
 
 ## Danach
-Finance (Doppik), Wareneingang & Rechnungsabgleich, Inventar, HR, Projekte, CRM, Workflow-Designer, Integrationen.
+Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md).
+
+* ⬜ M6 Plattform-Bausteine (Outbox-Dispatcher, Benachrichtigungen, Genehmigungs-Engine)
+* ⬜ M7 HR-Basis · M8 Dienstplanung · M9 Zeiterfassung · M10 Abrechnung (Lohn-Export, später Kundenabrechnung)
+* ⬜ M11 Projekte · M12 Finance (Doppik) · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
+* ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security
