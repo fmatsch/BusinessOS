@@ -6,6 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
 import { exportReportCsv, listReports, runReport } from "./analytics/service";
 import { listWorkflowRuns, listWorkflows, publishWorkflow, setWorkflowEnabled, workflowHistory } from "./workflows/service";
 import { adjustStock, createItem, getItem, issueStock, listItems, listStockableReceiptLines, reverseMovement, stockReceiptLine, updateItem } from "./inventory/service";
@@ -107,6 +108,19 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["listEntries", "gl.read", () => listEntries(none)],
+  ["getEntry", "gl.read", () => getEntry(none, "x")],
+  ["listPeriods", "gl.read", () => listPeriods(none, 2027)],
+  ["trialBalance", "gl.read", () => trialBalance(none, { to: "2027-12-31" })],
+  ["accountLedger", "gl.read", () => accountLedger(none, "x", { to: "2027-12-31" })],
+  ["incomeStatementReport", "gl.read", () => incomeStatementReport(none, { to: "2027-12-31" })],
+  ["balanceSheetReport", "gl.read", () => balanceSheetReport(none, "2027-12-31")],
+  ["createManualEntry", "gl.post", () => createManualEntry(none, {})],
+  ["reverseEntry", "gl.post", () => reverseEntry(none, "x", "grund")],
+  ["closeGlPeriod", "gl.close", () => closeGlPeriod(none, { year: 2027, month: 1 })],
+  ["reopenGlPeriod", "gl.reopen", () => reopenGlPeriod(none, { year: 2027, month: 1 }, "begründung")],
+  ["activateGl", "gl.settings", () => activateGl(none, { startDate: "2027-01-01" })],
+  ["postMissingDocuments", "gl.settings", () => postMissingDocuments(none)],
   ["listReports", "analytics.read", () => listReports(none)],
   ["runReport", "analytics.read", () => runReport(none, "revenue", 2027)],
   ["exportReportCsv", "analytics.read", () => exportReportCsv(none, "revenue", 2027)],

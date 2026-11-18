@@ -892,6 +892,8 @@ model Account {
   name           String
   /// GL = Sachkonto | VENDOR = Kreditor | CUSTOMER = Debitor
   type           String
+  /// Einordnung für Bilanz und GuV (nur Sachkonten): ASSET | LIABILITY | EQUITY | INCOME | EXPENSE. Personenkonten: Debitor = Aktiva, Kreditor = Passiva.
+  kind           String?
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
 
@@ -910,6 +912,11 @@ model TaxCode {
   bmdCode        String?
   /// BU-Schlüssel im DATEV-Format laut Vorgabe der Steuerberatung
   datevKey       String?
+  /// Konto der Umsatz- bzw. Vorsteuer im Hauptbuch (Pflicht, sobald Belege automatisch gebucht werden und der Satz größer 0 ist)
+  vatAccountId   String?
+  /// Kennzahl der Umsatzsteuer-Voranmeldung (U 30) für die Bemessungsgrundlage bzw. die Steuer
+  uvaBaseCode    String?
+  uvaTaxCode     String?
   active         Boolean @default(true)
 
   @@unique([organizationId, key])
@@ -1001,6 +1008,75 @@ model SupplierInvoiceLine {
   taxCodeId        String
   expenseAccountId String
   costCenterId     String?
+}
+
+// ───────── Hauptbuch (doppelte Buchführung) ─────────
+
+/// Einstellungen des Hauptbuchs. Ab dem Startdatum werden Belege automatisch gebucht.
+model GlSettings {
+  organizationId String   @id
+  startDate      DateTime @db.Date
+  /// Bankkonto für Zahlungseingänge und -ausgänge
+  bankAccountId  String?
+  createdById    String
+  createdAt      DateTime @default(now())
+}
+
+/// Buchungsperiode (Monat). Geschlossene Perioden nehmen keine Buchungen mehr an.
+model AccountingPeriod {
+  id             String    @id @default(cuid())
+  organizationId String
+  year           Int
+  month          Int
+  /// OPEN | CLOSED
+  status         String    @default("OPEN")
+  closedAt       DateTime?
+  closedById     String?
+  note           String?
+
+  @@unique([organizationId, year, month])
+}
+
+/// Buchungssatz. Unveränderlich (Trigger); Korrektur nur per Storno-Buchung. Soll und Haben sind je Satz ausgeglichen (Constraint-Trigger).
+model JournalEntry {
+  id             String         @id @default(cuid())
+  organizationId String
+  /// lückenlos je Organisation und Jahr (BU-2027-00001)
+  number         String
+  entryDate      DateTime       @db.Date
+  text           String
+  /// MANUAL | CUSTOMER_INVOICE | SUPPLIER_INVOICE | CUSTOMER_PAYMENT | SUPPLIER_PAYMENT | REVERSAL | OPENING | DEPRECIATION | PAYROLL
+  source         String
+  /// Beleg, aus dem automatisch gebucht wurde (je Quelle höchstens ein Satz)
+  sourceId       String?
+  reversesId     String?        @unique
+  reverses       JournalEntry?  @relation("EntryReversal", fields: [reversesId], references: [id])
+  reversedBy     JournalEntry?  @relation("EntryReversal")
+  createdById    String
+  createdAt      DateTime       @default(now())
+
+  lines JournalLine[]
+
+  @@unique([organizationId, number])
+  @@unique([organizationId, source, sourceId])
+  @@index([organizationId, entryDate])
+}
+
+model JournalLine {
+  id           String       @id @default(cuid())
+  entryId      String
+  entry        JournalEntry @relation(fields: [entryId], references: [id])
+  accountId    String
+  debit        Decimal      @default(0) @db.Decimal(19, 4)
+  credit       Decimal      @default(0) @db.Decimal(19, 4)
+  costCenterId String?
+  taxCodeId    String?
+  /// BASE = Bemessungsgrundlage, TAX = Steuerbetrag (für die Umsatzsteuer-Voranmeldung)
+  taxRole      String?
+  text         String?
+
+  @@index([accountId])
+  @@index([entryId])
 }
 
 // ───────── Workflows: versionierte Regeln (Ereignis → Bedingungen → Benachrichtigung) ─────────

@@ -5,6 +5,7 @@ import { Decimal } from "@/lib/money";
 import { authorize, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
 import { emitEvent } from "@/platform/events/emit";
+import { postDocument, postPayment, reversePayment } from "@/modules/gl/service";
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { dateFromIso, isoFromDate, addDays } from "@/modules/hr/queries";
 import { receivingOf } from "@/modules/procurement/queries";
@@ -187,6 +188,29 @@ export async function setIssuerProfile(ctx: Ctx, raw: unknown) {
   });
 }
 
+/** Einordnung eines Sachkontos für Bilanz und GuV. */
+export async function setAccountKind(ctx: Ctx, accountId: string, kind: string | null) {
+  authorize(ctx, "finance.master.write");
+  if (kind !== null && !["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"].includes(kind)) throw new ConflictError("Unbekannte Einordnung");
+  return db.$transaction(async (tx) => {
+    const r = await tx.account.updateMany({ where: { id: accountId, organizationId: ctx.organizationId, type: "GL" }, data: { kind } });
+    if (r.count !== 1) throw new NotFoundError("Sachkonto");
+    await writeAudit(tx, ctx, { action: "account.kind", entityType: "Account", entityId: accountId, after: { kind } });
+  });
+}
+
+/** Steuerkonto im Hauptbuch und Kennzahlen der Umsatzsteuer-Voranmeldung eines Steuerkennzeichens. */
+export async function setTaxGlMapping(ctx: Ctx, taxCodeId: string, input: { vatAccountId: string | null; uvaBaseCode?: string | null; uvaTaxCode?: string | null }) {
+  authorize(ctx, "finance.master.write");
+  const code = (v: string | null | undefined) => { const t = (v ?? "").trim(); if (t && !/^\d{3}$/.test(t)) throw new ConflictError("Kennzahlen der Voranmeldung sind dreistellig (z. B. 022)"); return t || null; };
+  return db.$transaction(async (tx) => {
+    if (input.vatAccountId && !(await tx.account.findFirst({ where: { id: input.vatAccountId, organizationId: ctx.organizationId, type: "GL", active: true }, select: { id: true } }))) throw new NotFoundError("Steuerkonto");
+    const r = await tx.taxCode.updateMany({ where: { id: taxCodeId, organizationId: ctx.organizationId }, data: { vatAccountId: input.vatAccountId ?? null, uvaBaseCode: code(input.uvaBaseCode), uvaTaxCode: code(input.uvaTaxCode) } });
+    if (r.count !== 1) throw new NotFoundError("Steuerkennzeichen");
+    await writeAudit(tx, ctx, { action: "tax_code.gl_mapping", entityType: "TaxCode", entityId: taxCodeId, after: { vatAccountId: input.vatAccountId ?? null } });
+  });
+}
+
 // ───────────────────────── Belegdateien ─────────────────────────
 
 export const MAX_FILE_BYTES = 8 * 1024 * 1024;
@@ -348,6 +372,7 @@ export async function approveSupplierInvoice(ctx: Ctx, id: string) {
     if (inv.lines.some((l) => !l.expenseAccountId)) throw new ConflictError("Nicht jede Position hat ein Aufwandskonto");
     const claimed = await tx.supplierInvoice.updateMany({ where: { id, status: "DRAFT" }, data: { status: "APPROVED", approvedById: ctx.userId, approvedAt: new Date(), voucherNumber: await nextNumber(tx, ctx.organizationId, "ER", inv.invoiceDate.getUTCFullYear()) } });
     if (claimed.count !== 1) throw new ConflictError("Der Beleg wurde bereits bearbeitet");
+    await postDocument(tx, ctx, "SUPPLIER", id); // Hauptbuch (falls eingeschaltet)
     await writeAudit(tx, ctx, { action: "supplier_invoice.approve", entityType: "SupplierInvoice", entityId: id });
     await emitEvent(tx, ctx, "supplier_invoice.approved", { invoiceId: id, invoiceNumber: inv.invoiceNumber, gross: inv.grossTotal.toString(), href: `/finance/in/${id}` });
   });
@@ -380,6 +405,7 @@ export async function markSupplierInvoicePaid(ctx: Ctx, raw: unknown) {
 export async function paySupplierInvoiceTx(tx: Tx, ctx: Ctx, id: string, paidOn: string, via?: Record<string, string>) {
   const r = await tx.supplierInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, status: "APPROVED", paidOn: null }, data: { paidOn: dateFromIso(paidOn) } });
   if (r.count !== 1) throw new ConflictError("Nur freigegebene, noch nicht bezahlte Belege können als bezahlt markiert werden");
+  await postPayment(tx, ctx, "SUPPLIER", id, paidOn);
   await writeAudit(tx, ctx, { action: "supplier_invoice.paid", entityType: "SupplierInvoice", entityId: id, after: { paidOn, ...via } });
 }
 
@@ -387,6 +413,7 @@ export async function paySupplierInvoiceTx(tx: Tx, ctx: Ctx, id: string, paidOn:
 export async function unpaySupplierInvoiceTx(tx: Tx, ctx: Ctx, id: string, via?: Record<string, string>) {
   const r = await tx.supplierInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, paidOn: { not: null } }, data: { paidOn: null } });
   if (r.count !== 1) throw new ConflictError("Der Beleg ist nicht als bezahlt vermerkt");
+  await reversePayment(tx, ctx, "SUPPLIER", id);
   await writeAudit(tx, ctx, { action: "supplier_invoice.unpaid", entityType: "SupplierInvoice", entityId: id, after: via });
 }
 
@@ -473,6 +500,7 @@ export async function issueCustomerInvoice(ctx: Ctx, id: string) {
     const number = await nextNumber(tx, ctx.organizationId, "AR", inv.invoiceDate.getUTCFullYear());
     const issuer = await getIssuerProfile(ctx, tx);
     await tx.customerInvoice.update({ where: { id }, data: { number, issuerSnapshot: (issuer ?? undefined) as unknown as Prisma.InputJsonValue | undefined } });
+    await postDocument(tx, ctx, "CUSTOMER", id); // Hauptbuch (falls eingeschaltet)
     await writeAudit(tx, ctx, { action: "customer_invoice.issue", entityType: "CustomerInvoice", entityId: id, after: { number, gross: inv.grossTotal.toString() } });
     await emitEvent(tx, ctx, "customer_invoice.issued", { invoiceId: id, number, gross: inv.grossTotal.toString(), href: `/finance/out/${id}` });
     return number;
@@ -509,6 +537,7 @@ export async function markCustomerInvoicePaid(ctx: Ctx, raw: unknown) {
 export async function payCustomerInvoiceTx(tx: Tx, ctx: Ctx, id: string, paidOn: string, via?: Record<string, string>) {
   const r = await tx.customerInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, status: "ISSUED", paidOn: null }, data: { paidOn: dateFromIso(paidOn) } });
   if (r.count !== 1) throw new ConflictError("Nur ausgestellte, noch nicht bezahlte Rechnungen können als bezahlt markiert werden");
+  await postPayment(tx, ctx, "CUSTOMER", id, paidOn);
   await writeAudit(tx, ctx, { action: "customer_invoice.paid", entityType: "CustomerInvoice", entityId: id, after: { paidOn, ...via } });
   await emitEvent(tx, ctx, "customer_invoice.paid", { invoiceId: id, paidOn, href: `/finance/out/${id}` });
 }
@@ -516,6 +545,7 @@ export async function payCustomerInvoiceTx(tx: Tx, ctx: Ctx, id: string, paidOn:
 export async function unpayCustomerInvoiceTx(tx: Tx, ctx: Ctx, id: string, via?: Record<string, string>) {
   const r = await tx.customerInvoice.updateMany({ where: { id, organizationId: ctx.organizationId, paidOn: { not: null } }, data: { paidOn: null } });
   if (r.count !== 1) throw new ConflictError("Die Rechnung ist nicht als bezahlt vermerkt");
+  await reversePayment(tx, ctx, "CUSTOMER", id);
   await writeAudit(tx, ctx, { action: "customer_invoice.unpaid", entityType: "CustomerInvoice", entityId: id, after: via });
 }
 

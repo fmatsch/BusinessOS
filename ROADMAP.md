@@ -192,6 +192,15 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ Ubuntu-Ablauf auf Ubuntu 24.04 (WSL2) vollständig durchlaufen: Neuinstallation, Aktualisierung (neues Release, Daten und Sitzungen bleiben), Anmeldung über nginx
 * ⚠️ Nicht erprobt: Ubuntu 22.04, Domain mit Zertifikat, ufw-Option, Schlüssel-Anmeldung; nur Ubuntu 22.04+; Build läuft auf dem Server; Sicherungen liegen auf dem Server selbst; keine Hochverfügbarkeit
 
+## Hauptbuch (doppelte Buchführung)
+* ✅ Buchungssätze (`JournalEntry`/`JournalLine`): immer ausgeglichen (Prüfung im Service **und** per Constraint-Trigger der Datenbank), je Zeile genau eine Seite, lückenlose Nummern (BU-JJJJ-NNNNN), unveränderlich (Trigger), Korrektur nur per Storno; manuelle und Eröffnungsbuchungen
+* ✅ Automatische Buchung ab einem festen Startdatum, in derselben Transaktion: Ausgangsrechnung (Debitor an Erlöse und Umsatzsteuer), Gutschrift, Eingangsrechnung (Aufwand und Vorsteuer an Kreditor), Zahlungsvermerk (Bank an Debitor / Kreditor an Bank), Rücknahme per Storno; fehlt ein Konto, scheitert das Ausstellen/Freigeben mit klarer Meldung und es wird nichts halb gebucht; Nachbuchen früherer Belege
+* ✅ Perioden (Monate) abschließen: geschlossene Monate nehmen nichts mehr an (auch keine automatischen Buchungen); Öffnen nur durch den Inhaber mit Begründung
+* ✅ Saldenliste, Kontoblatt (laufender Saldo), GuV, Bilanz (Aktiva = Passiva inkl. Ergebnisvortrag und laufendem Ergebnis; nicht eingeordnete Konten werden gemeldet)
+* ✅ Einordnung der Sachkonten (Aktiva/Passiva/Eigenkapital/Ertrag/Aufwand), Steuerkonten je Steuerkennzeichen; Kennzahlen der Umsatzsteuer-Voranmeldung vorbereitet
+* ⚠️ Kein Kontenrahmen vorgegeben (Konten und Einordnung kommen aus Import/Steuerberatung); keine Jahresabschlussbuchungen (Ergebnisvortrag wird berechnet), keine Anlagenbuchhaltung, keine Umsatzsteuer-Voranmeldung, keine Kostenrechnung über Kostenstellen hinaus; Spesen, Lohn und Lager buchen noch nicht automatisch; Bankabgleich bucht nur den Zahlungsvermerk
+* ⚠️ Nicht von einer Steuerberatung abgenommen: vor produktiver Nutzung Konten, Steuerkonten und Bilanzgliederung prüfen lassen
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 

@@ -63,3 +63,76 @@ export async function revenueByMonth(tx: Prisma.TransactionClient, organizationI
   for (const r of rows) out[r.m - 1] = new Decimal(r.total.toString());
   return out;
 }
+
+// ───────────────────────── Für das Hauptbuch (Buchungen aus Belegen) ─────────────────────────
+
+export interface PostingDoc {
+  id: string;
+  type: "CUSTOMER" | "SUPPLIER";
+  /** Rechnungsnummer (Ausgang: AR-…, Eingang: Belegnummer ER-… bzw. Nummer des Lieferanten) */
+  number: string;
+  partyName: string;
+  date: string;
+  credit: boolean;
+  /** Debitoren- bzw. Kreditorenkonto der Gegenseite; fehlt es, kann nicht gebucht werden */
+  partyAccountId: string | null;
+  lines: { accountId: string; taxCodeId: string; net: Decimal; costCenterId: string | null }[];
+  gross: Decimal;
+  paidOn: string | null;
+}
+
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Beleg mit den Angaben für die Buchung. Nur ausgestellte (Ausgang) bzw. freigegebene (Eingang) Belege; sonst null. */
+export async function postingDoc(tx: Prisma.TransactionClient, organizationId: string, type: "CUSTOMER" | "SUPPLIER", id: string): Promise<PostingDoc | null> {
+  if (type === "CUSTOMER") {
+    const i = await tx.customerInvoice.findFirst({ where: { id, organizationId, status: "ISSUED" }, include: { customer: true, lines: true } });
+    if (!i || !i.number) return null;
+    return {
+      id, type, number: i.number, partyName: i.customer.name, date: iso(i.invoiceDate), credit: i.kind === "CREDIT", partyAccountId: i.customer.receivableAccountId,
+      lines: i.lines.map((l) => ({ accountId: l.revenueAccountId, taxCodeId: l.taxCodeId, net: new Decimal(l.netAmount.toString()), costCenterId: l.costCenterId })), gross: new Decimal(i.grossTotal.toString()), paidOn: i.paidOn ? iso(i.paidOn) : null,
+    };
+  }
+  const i = await tx.supplierInvoice.findFirst({ where: { id, organizationId, status: "APPROVED" }, include: { supplier: true, lines: true } });
+  if (!i) return null;
+  return {
+    id, type, number: i.voucherNumber ?? i.invoiceNumber, partyName: i.supplier.name, date: iso(i.invoiceDate), credit: i.kind === "CREDIT", partyAccountId: i.supplier.payableAccountId,
+    lines: i.lines.map((l) => ({ accountId: l.expenseAccountId ?? "", taxCodeId: l.taxCodeId, net: new Decimal(l.netAmount.toString()), costCenterId: l.costCenterId })), gross: new Decimal(i.grossTotal.toString()), paidOn: i.paidOn ? iso(i.paidOn) : null,
+  };
+}
+
+/** Steuerkennzeichen mit Steuerkonto und Satz, je Kennung. */
+export async function taxInfoMap(tx: Prisma.TransactionClient, organizationId: string) {
+  const codes = await tx.taxCode.findMany({ where: { organizationId } });
+  return new Map(codes.map((t) => [t.id, { rate: new Decimal(t.rate.toString()), vatAccountId: t.vatAccountId, key: t.key }]));
+}
+
+/** Zu zahlender Betrag eines Belegs: Brutto abzüglich bezogener Gutschriften (wie der Bankabgleich). */
+export async function payableAmount(tx: Prisma.TransactionClient, organizationId: string, type: "CUSTOMER" | "SUPPLIER", id: string): Promise<Decimal | null> {
+  if (type === "CUSTOMER") {
+    const inv = await tx.customerInvoice.findFirst({ where: { id, organizationId }, select: { grossTotal: true } });
+    if (!inv) return null;
+    const credits = await tx.customerInvoice.findMany({ where: { organizationId, status: "ISSUED", kind: "CREDIT", creditsId: id }, select: { grossTotal: true } });
+    return credits.reduce((a, c) => a.minus(c.grossTotal.toString()), new Decimal(inv.grossTotal.toString()));
+  }
+  const inv = await tx.supplierInvoice.findFirst({ where: { id, organizationId }, select: { grossTotal: true } });
+  if (!inv) return null;
+  const credits = await tx.supplierInvoice.findMany({ where: { organizationId, status: "APPROVED", kind: "CREDIT", creditsId: id }, select: { grossTotal: true } });
+  return credits.reduce((a, c) => a.minus(c.grossTotal.toString()), new Decimal(inv.grossTotal.toString()));
+}
+
+/** Belege ab einem Datum, die gebucht sein müssten (für das Nachbuchen): Kennungen mit Datum und Zahlungsdatum. */
+export async function documentsSince(tx: Prisma.TransactionClient, organizationId: string, from: string) {
+  const since = new Date(`${from}T00:00:00Z`);
+  const [cust, sup] = await Promise.all([
+    tx.customerInvoice.findMany({ where: { organizationId, status: "ISSUED", invoiceDate: { gte: since } }, select: { id: true, paidOn: true, kind: true }, orderBy: { invoiceDate: "asc" } }),
+    tx.supplierInvoice.findMany({ where: { organizationId, status: "APPROVED", invoiceDate: { gte: since } }, select: { id: true, paidOn: true, kind: true }, orderBy: { invoiceDate: "asc" } }),
+  ]);
+  const map = (rows: typeof cust, type: "CUSTOMER" | "SUPPLIER") => rows.map((r) => ({ id: r.id, type, kind: r.kind, paidOn: r.paidOn ? iso(r.paidOn) : null }));
+  return [...map(cust, "CUSTOMER"), ...map(sup, "SUPPLIER")];
+}
+
+export async function fiscalYearStartMonth(tx: Prisma.TransactionClient, organizationId: string) {
+  return (await tx.accountingProfile.findUnique({ where: { organizationId }, select: { fiscalYearStartMonth: true } }))?.fiscalYearStartMonth ?? 1;
+}
+export { allocateTax } from "./tax";

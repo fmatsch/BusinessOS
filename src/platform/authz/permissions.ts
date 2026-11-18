@@ -80,6 +80,11 @@ export const PERMISSIONS = [
   "workflow.read",
   "workflow.manage",
   "analytics.read",
+  "gl.read",
+  "gl.post",
+  "gl.close",
+  "gl.reopen",
+  "gl.settings",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -134,6 +139,10 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "inventory.move",
       "workflow.read",
       "analytics.read",
+      "gl.read",
+      "gl.post",
+      "gl.close",
+      "gl.settings",
       "project.read",
       "project.manage",
       "project.time.book",
