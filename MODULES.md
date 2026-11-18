@@ -116,7 +116,7 @@ Begründung der Reihenfolge:
 | **Finance (M12)** | Kontenplan, Journal (Doppik, Storno), Debitoren/Kreditoren, Rechnungen, Zahlungen, Steuern – **Plan: [FINANCE.md](FINANCE.md)** | – |
 | **Wareneingang und Rechnungsabgleich** | Beschaffung bis Zahlung schließen | Finance |
 | **Inventar** | Artikel, Lager, Bewegungen (append-only), Bestände | Beschaffung |
-| **CRM** | Firmen, Kontakte, Leads, Pipeline | Projekte (für A) |
+| **CRM** (schlank umgesetzt, siehe ROADMAP M14) | Kontakte, Aktivitäten, Angebote; Leads/Pipeline offen | Projekte (für A) |
 | **Workflow-Designer** | Versionierte Definitionen statt Konstanten | M6 |
 | **Analysen** | Auswertungen über Module | Daten der Module |
 | **REST-API mit OpenAPI** | war im Ursprungsauftrag gefordert, fehlt bisher | Services stabil |

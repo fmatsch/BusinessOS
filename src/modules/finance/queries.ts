@@ -29,3 +29,23 @@ export async function invoicedNetByCostCenter(tx: Prisma.TransactionClient, orga
   }
   return out;
 }
+
+/** Kunden für das CRM (nur Stammdaten, keine Konten). */
+export async function crmCustomers(tx: Prisma.TransactionClient, organizationId: string) {
+  return tx.customer.findMany({ where: { organizationId, active: true }, orderBy: { name: "asc" }, select: { id: true, number: true, name: true, street: true, zip: true, city: true, country: true, uid: true, paymentTermsDays: true } });
+}
+
+export async function crmCustomer(tx: Prisma.TransactionClient, organizationId: string, id: string) {
+  return tx.customer.findFirst({ where: { id, organizationId }, select: { id: true, number: true, name: true, street: true, zip: true, city: true, country: true, uid: true, paymentTermsDays: true, active: true } });
+}
+
+/** Letzte Ausgangsrechnungen eines Kunden (Nummer, Datum, Betrag, Status) für die Kundenakte. */
+export async function customerInvoiceSummary(tx: Prisma.TransactionClient, organizationId: string, customerId: string) {
+  return tx.customerInvoice.findMany({ where: { organizationId, customerId }, orderBy: { createdAt: "desc" }, take: 10, select: { id: true, number: true, kind: true, status: true, invoiceDate: true, grossTotal: true, currency: true, paidOn: true } });
+}
+
+/** Steuersätze (in Prozent, als Text) je Steuerkennzeichen. */
+export async function taxRatesById(tx: Prisma.TransactionClient, organizationId: string, ids: string[]): Promise<Map<string, string>> {
+  const codes = await tx.taxCode.findMany({ where: { organizationId, id: { in: [...new Set(ids)] } }, select: { id: true, rate: true } });
+  return new Map(codes.map((c) => [c.id, c.rate.toString()]));
+}

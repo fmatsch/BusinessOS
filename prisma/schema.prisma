@@ -337,11 +337,13 @@ model Approval {
   id                 String           @id @default(cuid())
   organizationId     String
   organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  /// genau eines von requestId / absenceRequestId ist gesetzt (CHECK-Constraint in der Migration)
+  /// genau eines von requestId / absenceRequestId / quoteId ist gesetzt (CHECK-Constraint in der Migration)
   requestId          String?
   request            PurchaseRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
   absenceRequestId   String?
   absenceRequest     AbsenceRequest?  @relation(fields: [absenceRequestId], references: [id], onDelete: Cascade)
+  quoteId            String?
+  quote              Quote?           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   stepKey            String
   label              String           @default("")
   /// Schnappschuss der nötigen Berechtigung aus der Freigaberegel
@@ -354,6 +356,7 @@ model Approval {
 
   @@unique([requestId, sequence])
   @@unique([absenceRequestId, sequence])
+  @@unique([quoteId, sequence])
   @@index([organizationId, status])
 }
 
@@ -925,8 +928,11 @@ model Customer {
   active              Boolean  @default(true)
   createdAt           DateTime @default(now())
 
-  invoices  CustomerInvoice[]
-  recurring RecurringInvoice[]
+  invoices   CustomerInvoice[]
+  recurring  RecurringInvoice[]
+  contacts   Contact[]
+  activities Activity[]
+  quotes     Quote[]
 
   @@unique([organizationId, number])
 }
@@ -992,6 +998,93 @@ model SupplierInvoiceLine {
   taxCodeId        String
   expenseAccountId String
   costCenterId     String?
+}
+
+// ───────── CRM (schlank): Kontakte, Aktivitäten, Angebote ─────────
+
+/// Ansprechperson eines Kunden. Personenbezogen: Löschwunsch per Anonymisierung (Name und Kontaktdaten werden gelöscht, der Datensatz bleibt für Verweise).
+model Contact {
+  id             String    @id @default(cuid())
+  organizationId String
+  customerId     String
+  customer       Customer  @relation(fields: [customerId], references: [id])
+  name           String
+  position       String?
+  email          String?
+  phone          String?
+  note           String?
+  active         Boolean   @default(true)
+  anonymizedAt   DateTime?
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  activities Activity[]
+
+  @@index([organizationId, customerId])
+}
+
+/// Aktivitätsprotokoll (Anruf, E-Mail, Termin, Notiz). Unveränderlich (Trigger).
+model Activity {
+  id             String   @id @default(cuid())
+  organizationId String
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id])
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id])
+  /// CALL | MAIL | MEETING | NOTE
+  type           String
+  occurredOn     DateTime @db.Date
+  subject        String
+  body           String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, customerId, occurredOn])
+}
+
+/// Angebot. DRAFT → PENDING (Freigabe) → APPROVED → SENT (Nummer, eingefroren) → ACCEPTED | DECLINED; DRAFT/PENDING/APPROVED → CANCELLED.
+model Quote {
+  id             String    @id @default(cuid())
+  organizationId String
+  customerId     String
+  customer       Customer  @relation(fields: [customerId], references: [id])
+  /// lückenlose Angebotsnummer, vergeben beim Versenden (AN-2027-0001)
+  number         String?
+  title          String
+  validUntil     DateTime  @db.Date
+  status         String    @default("DRAFT")
+  currency       String    @default("EUR")
+  netTotal       Decimal   @db.Decimal(19, 4)
+  taxTotal       Decimal   @db.Decimal(19, 4)
+  grossTotal     Decimal   @db.Decimal(19, 4)
+  note           String?
+  policyVersion  Int?
+  issuerSnapshot Json?
+  sentAt         DateTime?
+  decidedAt      DateTime?
+  decidedById    String?
+  /// Rechnungsentwurf, der aus dem angenommenen Angebot entstanden ist
+  invoiceId      String?   @unique
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  lines     QuoteLine[]
+  approvals Approval[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+}
+
+model QuoteLine {
+  id               String  @id @default(cuid())
+  quoteId          String
+  quote            Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  description      String
+  quantity         Decimal @db.Decimal(19, 4)
+  unitPrice        Decimal @db.Decimal(19, 4)
+  netAmount        Decimal @db.Decimal(19, 4)
+  taxCodeId        String
+  revenueAccountId String?
 }
 
 /// Vorlage für wiederkehrende Rechnungen. Erzeugt nur Entwürfe; das Ausstellen bleibt eine bewusste Handlung.

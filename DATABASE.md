@@ -69,6 +69,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Wiederkehrende Rechnungen**
 `RecurringInvoice` (+ `RecurringInvoiceLine`): Rhythmus, Ankertag, nächster Lauf, Ende. `CustomerInvoice.recurringId/recurringDate` (eindeutig) verhindert doppelte Entwürfe je Termin.
 
+**CRM**
+`Contact` (anonymisierbar), `Activity` (append-only per Trigger), `Quote` + `QuoteLine` (Status, Nummer beim Versenden, `issuerSnapshot`, `invoiceId` zum erzeugten Rechnungsentwurf). `Approval.quoteId` erweitert die Freigabe um Angebote (CHECK: genau ein Bezug).
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

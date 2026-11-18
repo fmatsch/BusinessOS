@@ -15,7 +15,9 @@ export type InvoicePdfInput = {
   issuerDetails?: IssuerDetails | null;
   customer: { name: string; street?: string | null; zip?: string | null; city?: string | null; country?: string | null; uid?: string | null };
   number: string;
-  kind: "INVOICE" | "CREDIT";
+  kind: "INVOICE" | "CREDIT" | "QUOTE";
+  /** Nur Angebote: gültig bis (JJJJ-MM-TT) */
+  validUntil?: string | null;
   creditsNumber?: string | null;
   invoiceDate: string; // YYYY-MM-DD
   dueDate?: string | null;
@@ -122,7 +124,8 @@ export function renderInvoicePdf(inv: InvoicePdfInput): Uint8Array {
   };
 
   const isCredit = inv.kind === "CREDIT";
-  const title = isCredit ? "Gutschrift" : "Rechnung";
+  const isQuote = inv.kind === "QUOTE";
+  const title = isCredit ? "Gutschrift" : isQuote ? "Angebot" : "Rechnung";
   const right = PAGE_W - MARGIN;
 
   let y = newPage();
@@ -142,7 +145,8 @@ export function renderInvoicePdf(inv: InvoicePdfInput): Uint8Array {
   // Kopfdaten rechts
   let ry = PAGE_H - MARGIN - 50;
   const meta: [string, string][] = [[`${title}snummer`, inv.number], ["Datum", fmtDate(inv.invoiceDate)]];
-  if (inv.dueDate && !isCredit) meta.push(["Fällig am", fmtDate(inv.dueDate)]);
+  if (inv.dueDate && !isCredit && !isQuote) meta.push(["Fällig am", fmtDate(inv.dueDate)]);
+  if (isQuote && inv.validUntil) meta.push(["Gültig bis", fmtDate(inv.validUntil)]);
   if (isCredit && inv.creditsNumber) meta.push(["Bezug", inv.creditsNumber]);
   for (const [k, v] of meta) { cur().text(330, ry, k, 9); cur().right(right, ry, v, 10, true); ry -= 14; }
 
@@ -187,6 +191,7 @@ export function renderInvoicePdf(inv: InvoicePdfInput): Uint8Array {
   y -= 14;
   const notes: string[] = [];
   if (isCredit) notes.push("Dieser Betrag wird Ihnen gutgeschrieben.");
+  else if (isQuote) { if (inv.validUntil) notes.push(`Dieses Angebot ist gültig bis ${fmtDate(inv.validUntil)}. Alle Preise verstehen sich netto zuzüglich Umsatzsteuer, soweit nicht anders ausgewiesen.`); }
   else if (inv.dueDate) notes.push(`Bitte überweisen Sie den Betrag bis ${fmtDate(inv.dueDate)} unter Angabe der Rechnungsnummer ${inv.number}.`);
   if (inv.note) notes.push(inv.note);
   for (const n of notes) for (const ln of wrapText(n, right - MARGIN, 9)) {

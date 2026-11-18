@@ -58,6 +58,11 @@ export const PERMISSIONS = [
   "finance.export.create",
   "finance.dunning.create",
   "finance.recurring.manage",
+  "crm.read",
+  "crm.write",
+  "crm.quote.create",
+  "crm.quote.approve",
+  "crm.contact.erase",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -98,6 +103,10 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "finance.invoice.in.accept_variance",
       "finance.dunning.create",
       "finance.recurring.manage",
+      "crm.read",
+      "crm.write",
+      "crm.quote.create",
+      "crm.contact.erase",
     ],
   },
   hr: {
@@ -164,6 +173,8 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "roster.swap.approve",
       "time.entry.own",
       "time.period.approve",
+      "crm.read",
+      "crm.quote.approve",
     ],
   },
   employee: {

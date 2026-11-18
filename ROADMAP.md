@@ -138,9 +138,16 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ Budget „Ist“: Netto der freigegebenen Eingangsrechnungen je Kostenstelle und Jahr (Rechnungsdatum), Gutschriften abgezogen; Kostenstelle der Position, sonst der Bestellung (Gutschriften erben sie von der Rechnung). Anzeige neben „Gebunden“; „Verfügbar“ rechnet weiter mit dem gebundenen Betrag
 * ⚠️ Rechnungen ganz ohne Kostenstelle erscheinen in keiner Zeile; Geschäftsjahr = Kalenderjahr; Netto (keine Vorsteuer)
 
+## M14 CRM (schlank) und Angebote
+* ✅ Kundenakte: Ansprechpersonen, Aktivitätsprotokoll (unveränderlich), Übersicht mit letzter Aktivität und offenen Angeboten; Kunden werden weiterhin in den Finanzen angelegt
+* ✅ Angebote: Entwurf → Freigabe laut Freigaberegel (Objektart QUOTE, Vier-Augen, mehrstufig konfigurierbar) → Versenden mit lückenloser Nummer (AN-JJJJ-NNNN) und PDF → Annahme erzeugt einen Rechnungsentwurf; Ablehnung, Ablauf, Kopie statt Bearbeiten
+* ✅ DSGVO: Kontaktdaten per „Daten löschen“ anonymisieren (Datensatz bleibt, keine Personendaten im Audit-Log)
+* ⚠️ Keine Leads/Pipeline-Phasen, keine Kampagnen, keine E-Mail-Anbindung; Freitext in Aktivitäten wird beim Anonymisieren nicht bereinigt; Angebote nur in der Währung der Organisation, ohne Rabatte/Optionen
+* ⚠️ Neue Berechtigungen (`crm.*`) erreichen bestehende Organisationen per `npm run db:sync-roles`
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
 * ⬜ Kundenabrechnung nach Stunden (braucht Projekte und Finance)
-* ⬜ M11 Projekte · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
+* ⬜ M11 Projekte · Inventar · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

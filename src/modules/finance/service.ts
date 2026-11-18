@@ -226,6 +226,16 @@ export async function getFile(ctx: Ctx, id: string) {
 
 // ───────────────────────── Eingangsrechnungen ─────────────────────────
 
+/** Für andere Module (CRM-Angebote): Netto/Steuer/Brutto von Ausgangspositionen nach den Steuerkennzeichen der Organisation. */
+export async function priceOutputLines(tx: Tx, organizationId: string, lines: { taxCodeId: string; net: Decimal }[]) {
+  return (await priceLines(tx, organizationId, "OUTPUT", lines)).tax;
+}
+
+/** Nummernkreis für andere Module (lückenlos, atomar). */
+export async function nextSequenceNumber(tx: Tx, organizationId: string, prefix: string, year: number) {
+  return nextNumber(tx, organizationId, prefix, year);
+}
+
 async function priceLines<T extends { taxCodeId: string; net: Decimal }>(tx: Tx, organizationId: string, direction: "INPUT" | "OUTPUT", lines: T[]) {
   const codes = await tx.taxCode.findMany({ where: { organizationId, id: { in: [...new Set(lines.map((l) => l.taxCodeId))] }, active: true, direction } });
   const byId = new Map(codes.map((c) => [c.id, c]));
@@ -384,6 +394,14 @@ export async function createCustomerInvoice(ctx: Ctx, raw: unknown) {
   const input = customerInvoiceInput.parse(raw);
   return db.$transaction((tx) => createCustomerInvoiceTx(tx, ctx, input));
 }
+
+/** Für andere Module (CRM: Angebot angenommen): Rechnungsentwurf in der Transaktion des Aufrufers; prüft Berechtigung und Eingabe. */
+export async function createCustomerInvoiceDraftTx(tx: Tx, ctx: Ctx, raw: unknown) {
+  authorize(ctx, "finance.invoice.out.create");
+  return createCustomerInvoiceTx(tx, ctx, customerInvoiceInput.parse(raw));
+}
+
+export { renderInvoicePdf, type IssuerDetails } from "./invoice-pdf";
 
 /** Wie `createCustomerInvoice`, aber in einer vorhandenen Transaktion (Berechtigung und Eingabeprüfung macht der Aufrufer). */
 export async function createCustomerInvoiceTx(tx: Tx, ctx: Ctx, input: z.infer<typeof customerInvoiceInput>, origin?: { recurringId: string; recurringDate: string }) {

@@ -32,6 +32,7 @@
 * Exportläufe unveränderlich (DB-Trigger), Prüfsumme beim Download geprüft, jeder Download und Export im Audit-Log; paralleler Lauf je Organisation serialisiert.
 * Ausgangsrechnungsnummern lückenlos; Berechtigungen getrennt (Erfassen/Freigeben/Export lesen/erzeugen), Test in der Berechtigungsmatrix.
 * Wareneingänge sind append-only; Rechnungen mit Abweichung vom Abgleich lassen sich nur mit eigener Berechtigung, Begründung und nicht durch die erfassende Person freigeben (Audit-Log); Bestellungen werden bei Buchung und Freigabe zeilengesperrt (parallele Läufe).
+* CRM: Kontakte sind personenbezogen; Löschwunsch per Anonymisierung (eigene Berechtigung `crm.contact.erase`), Audit-Einträge enthalten nur Kennungen. Angebote brauchen eine Freigabe durch eine andere Person (Vier-Augen) und sind nach dem Versenden unveränderlich.
 
 ## Bekannte Lücken (offen)
 * Postgres Row-Level-Security noch nicht aktiv.
