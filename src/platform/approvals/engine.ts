@@ -3,7 +3,12 @@ import { Decimal } from "@/lib/money";
 import { PERMISSIONS } from "@/platform/authz/permissions";
 
 /** Berechtigungen, die als Freigabe-Berechtigung in einer Regel zulässig sind. */
-export const APPROVER_PERMISSIONS = ["procurement.request.approve", "procurement.request.approve_finance"] as const;
+export const APPROVER_PERMISSIONS = [
+  "procurement.request.approve",
+  "procurement.request.approve_finance",
+  "hr.absence.approve",
+  "hr.absence.approve_all",
+] as const;
 
 export const policyStepSchema = z.object({
   key: z.string().trim().min(1).max(30).regex(/^[A-Z0-9_]+$/, "Schlüssel: Großbuchstaben, Ziffern, _"),
@@ -31,6 +36,16 @@ export const DEFAULT_PURCHASE_POLICY: PolicyStep[] = [
   { key: "MANAGER", label: "Führungskraft", permission: "procurement.request.approve" },
   { key: "FINANCE", label: "Finanzen", permission: "procurement.request.approve_finance", minAmount: "5000" },
 ];
+
+export const DEFAULT_ABSENCE_POLICY: PolicyStep[] = [
+  { key: "MANAGER", label: "Führungskraft", permission: "hr.absence.approve" },
+];
+
+/** Standardregeln je Objektart (werden beim ersten Zugriff als Version 1 angelegt). */
+export const DEFAULT_POLICIES: Record<string, PolicyStep[]> = {
+  PURCHASE_REQUEST: DEFAULT_PURCHASE_POLICY,
+  ABSENCE_REQUEST: DEFAULT_ABSENCE_POLICY,
+};
 
 /** Die für diesen Betrag nötigen Schritte in Reihenfolge. */
 export function stepsFor(steps: PolicyStep[], amount: Decimal.Value): PolicyStep[] {

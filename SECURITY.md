@@ -21,12 +21,15 @@
 | Uploads | Typ- und Größenprüfung, Speicherung außerhalb des Webroots (Phase später) |
 | KI | nur lesende Tools mit Benutzerkontext, kein freies SQL, Werkzeugdaten als `<untrusted_data>` gekapselt, Quellen serverseitig, Audit jeder Aktion, Rate-Limit; Schreibzugriffe gibt es nicht (später nur mit Bestätigung) |
 | DSGVO | Datenminimierung, Löschkonzept für personenbezogene Daten, Auskunftsfähigkeit über Audit-Log |
+| HR-Daten | persönliche Angaben getrennt gespeichert, eigene Berechtigung, Lesezugriffe im Audit-Log (ohne Inhalte); Vertragsdaten nur Personal/Person selbst; Krankenstand ohne Diagnosen; Urlaubsjournal per Trigger unveränderlich |
 | Demo-Daten | ausschließlich synthetisch |
 
 ## Bekannte Lücken (offen)
 * Postgres Row-Level-Security noch nicht aktiv.
 * MFA nicht umgesetzt.
 * Rate Limiting zunächst in-memory (nicht verteilt).
+* Login-Sperre (5 Fehlversuche/15 Min je Konto) kann Konten fremder Personen blockieren; Gegenmaßnahme: MFA, IP-Drosselung.
+* Kein DSGVO-Löschkonzept für Mitarbeiterdaten (Anonymisierung/Aufbewahrung) – vor Produktivbetrieb nötig.
 
 ## Meldung
 Sicherheitslücken bitte per GitHub „Security Advisories" melden, nicht als öffentliches Issue.

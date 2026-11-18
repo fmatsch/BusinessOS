@@ -60,9 +60,22 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⚠️ Regeleditor begrenzt: max. 3 Schritte in der Oberfläche, nur Beschaffungs-Berechtigungen, Bedingung nur „Betrag über X"
 * ⚠️ Gleichzeitiges Veröffentlichen zweier Regelversionen endet für eine Seite in einem Fehler (eindeutige Version)
 
+## M7 – HR-Basis
+* ✅ Mitarbeiterverzeichnis (Personalnummer je Organisation eindeutig, Abteilung, Führungskraft ohne Zyklen, Verknüpfung zum Benutzerkonto), Seiten `/hr`, `/hr/[id]`
+* ✅ Beschäftigungsverhältnisse (Zeiträume ohne Überschneidung, Wochenstunden, Vertragsart, Kostenstelle) – nur Personal und die Person selbst
+* ✅ Persönliche Angaben getrennt gespeichert, eigene Berechtigung; **jeder Lesezugriff wird im Audit-Log protokolliert**, Inhalte stehen nie im Audit-Log
+* ✅ Urlaubskonto als **Journal** (Anspruch, Übertrag, Korrektur, Verbrauch, Storno), per DB-Trigger append-only; Saldo = Summe, Korrektur nur per Gegenbuchung
+* ✅ Abwesenheiten: Urlaub/Pflegefreistellung/Sonderurlaub mit Freigabe über die Genehmigungs-Engine (nur direkte Führungskraft oder Personal, keine Selbstfreigabe), Krankenstand ohne Freigabe (keine Diagnosen); Arbeitstage nach österreichischem Feiertagskalender, Jahreswechsel wird je Jahr gebucht
+* ✅ Sperre je Mitarbeiter (Zeilensperre) gegen Überbuchung bei parallelen Anträgen/Freigaben; Benachrichtigungen an Führungskraft/Personal/Antragsteller
+* ⚠️ Annahmen: 5-Tage-Woche Mo–Fr, nur österreichische gesetzliche Feiertage (kein Länderprofil, keine Teilzeit-Arbeitstage, keine halben Tage) – folgt mit der Zeiterfassung
+* ⚠️ Kein Resturlaubs-Verfall/Übertragsautomatik, keine Abwesenheitsarten-Verwaltung in der Oberfläche, keine Freigaberegel-Oberfläche für Abwesenheiten (Standard: Führungskraft)
+* ⚠️ Mitarbeiter ohne verknüpftes Benutzerkonto können keine Anträge stellen; Löschung/Anonymisierung (DSGVO) noch nicht umgesetzt
+* ⚠️ Login-Sperre nach 5 Fehlversuchen kann auch Dritte aussperren (Konto-DoS); dafür MFA/IP-Drosselung nötig
+* ✅ Behoben: Login-Limit zählte auch erfolgreiche Anmeldungen; Benachrichtigungs-Link verletzte „Label in Name" (WCAG 2.5.3)
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
-* ⬜ M7 HR-Basis · M8 Dienstplanung · M9 Zeiterfassung · M10 Lohn-Export, später Kundenabrechnung
+* ⬜ M8 Dienstplanung · M9 Zeiterfassung · M10 Lohn-Export, später Kundenabrechnung
 * ⬜ M11 Projekte · M12 Finance (Doppik) · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

@@ -52,6 +52,25 @@ async function main() {
       });
     }
   }
+  // Mitarbeiterprofile (synthetisch) für die Demo-Benutzer der ersten Organisation + Urlaubsanspruch
+  const org0 = orgs[0]!;
+  const people: { email: string; number: string; first: string; last: string; title: string; manager?: string }[] = [
+    { email: "fuehrung@demo.example", number: "100", first: "Franka", last: "Führung", title: "Teamleitung" },
+    { email: "mitarbeiter@demo.example", number: "101", first: "Max", last: "Mitarbeiter", title: "Sachbearbeitung", manager: "fuehrung@demo.example" },
+    { email: "finanzen@demo.example", number: "102", first: "Finn", last: "Finanzen", title: "Controlling" },
+    { email: "admin@demo.example", number: "001", first: "Alex", last: "Admin", title: "Geschäftsführung" },
+  ];
+  const empIds: Record<string, string> = {};
+  for (const p of people) {
+    const user = await db.user.findUniqueOrThrow({ where: { email: p.email } });
+    const existing = await db.employee.findFirst({ where: { organizationId: org0.id, userId: user.id } });
+    const e = existing ?? (await db.employee.create({
+      data: { organizationId: org0.id, number: p.number, firstName: p.first, lastName: p.last, jobTitle: p.title, email: p.email, userId: user.id, managerId: p.manager ? empIds[p.manager] : null },
+    }));
+    empIds[p.email] = e.id;
+    if (!(await db.leaveBalanceEntry.findFirst({ where: { employeeId: e.id, year: new Date().getFullYear(), kind: "ENTITLEMENT" } })))
+      await db.leaveBalanceEntry.create({ data: { organizationId: org0.id, employeeId: e.id, year: new Date().getFullYear(), kind: "ENTITLEMENT", days: 25, note: "Jahresanspruch (Demo)" } });
+  }
   console.log("Seed fertig: admin@ (Inhaber, 2 Organisationen), mitarbeiter@, fuehrung@, finanzen@demo.example");
 }
 

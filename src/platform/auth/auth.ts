@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { rateLimit } from "./rate-limit";
+import { clearKey, isLimited, recordHit } from "./rate-limit";
 
 const credentialsSchema = z.object({ email: z.string().email(), password: z.string().min(1).max(200) });
 
@@ -19,11 +19,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
         const email = parsed.data.email.toLowerCase();
-        if (!rateLimit(`login:${email}`, 5, 15 * 60_000)) return null;
+        // Nur Fehlversuche zählen: 5 pro 15 Minuten und Konto; ein erfolgreicher Login setzt den Zähler zurück
+        const key = `login:${email}`;
+        if (isLimited(key, 5, 15 * 60_000)) return null;
 
         const user = await db.user.findUnique({ where: { email } });
         const ok = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
-        if (!user || !user.active || !ok) return null;
+        if (!user || !user.active || !ok) {
+          recordHit(key);
+          return null;
+        }
+        clearKey(key);
         return { id: user.id, email: user.email, name: user.name };
       },
     }),

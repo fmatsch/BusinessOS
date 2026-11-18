@@ -2,7 +2,9 @@ import { revalidatePath } from "next/cache";
 import { requireContext } from "@/platform/tenancy/context";
 import { can } from "@/platform/authz/authorize";
 import { readPolicy, publishPolicy } from "@/platform/approvals/policy";
-import { APPROVER_PERMISSIONS } from "@/platform/approvals/engine";
+import { APPROVER_PERMISSIONS as ALL_APPROVER_PERMISSIONS } from "@/platform/approvals/engine";
+
+const APPROVER_PERMISSIONS = ALL_APPROVER_PERMISSIONS.filter((p) => p.startsWith("procurement."));
 import { ErrorBanner, runAction } from "../../action-helpers";
 
 export const dynamic = "force-dynamic";

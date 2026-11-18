@@ -33,6 +33,11 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 * `PurchaseOrder` 1—n `PurchaseOrderLine`, verweist auf `PurchaseRequest`, `Supplier`, `CostCenter`
 * `Budget` je `CostCenter` und Geschäftsjahr; *committed* = Summe offener Bestellungen (abgeleitet)
 
+**HR (M7)**
+* `Employee` (Personalnummer je Organisation eindeutig, `managerId` Hierarchie, `userId` optional), `EmployeeSensitive` (getrennt), `Employment` (Zeiträume, ohne Überschneidung im Service unter Zeilensperre)
+* `AbsenceType`, `AbsenceRequest` (Status, Arbeitstage), `Approval.absenceRequestId` (CHECK: genau ein Bezug – Bestellanforderung oder Abwesenheit)
+* `LeaveBalanceEntry`: Journal je Mitarbeiter/Jahr (`ENTITLEMENT`, `CARRYOVER`, `ADJUSTMENT`, `TAKEN`, `REVERSAL`), Trigger verbietet UPDATE und DELETE (Ausnahme nur mit `app.allow_journal_delete` in derselben Transaktion)
+
 **Weitere (Schema vorbereitet, Funktion später)**
 `Account`, `JournalEntry`, `JournalLine`, `Invoice`, `Payment`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

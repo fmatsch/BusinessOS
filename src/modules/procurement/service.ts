@@ -135,10 +135,12 @@ export async function listPendingApprovals(ctx: Ctx) {
   // nur der jeweils nächste offene Schritt ist entscheidbar
   const result = [];
   for (const a of pending) {
+    // Freigaben anderer Objektarten (z. B. Abwesenheiten) haben keine Bestellanforderung
+    if (!a.request || !a.requestId) continue;
     const earlier = await db.approval.count({
       where: { requestId: a.requestId, sequence: { lt: a.sequence }, status: { not: "APPROVED" } },
     });
-    if (earlier === 0) result.push(a);
+    if (earlier === 0) result.push({ ...a, requestId: a.requestId, request: a.request });
   }
   return result;
 }

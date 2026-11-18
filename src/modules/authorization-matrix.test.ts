@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ForbiddenError, type Ctx } from "@/platform/authz/authorize";
 import { PERMISSIONS, SYSTEM_ROLES, type Permission } from "@/platform/authz/permissions";
 import { publishPolicy, readPolicy } from "@/platform/approvals/policy";
+import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAbsence, listEmployees, listPendingAbsenceApprovals, listAbsences, requestAbsence, updateEmployee, writeSensitive } from "./hr/service";
 import { budgetOverview, committedByDepartment, setBudget } from "./budget/service";
 import { createCostCenter, createDepartment, listCostCenters, listDepartments } from "./masterdata/service";
 import { createOrder, createRequest, createSupplier, getRequest, listOrders, listRequests, listSuppliers } from "./procurement/service";
@@ -32,6 +33,16 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["budgetOverview", "finance.budget.read", () => budgetOverview(none, 2026)],
   ["committedByDepartment", "finance.budget.read", () => committedByDepartment(none, 2026)],
   ["setBudget", "finance.budget.write", () => setBudget(none, valid.budget)],
+  ["listEmployees", "hr.employee.read", () => listEmployees(none)],
+  ["createEmployee", "hr.employee.write", () => createEmployee(none, { number: "1", firstName: "a", lastName: "b" })],
+  ["updateEmployee", "hr.employee.write", () => updateEmployee(none, "x", { firstName: "a", lastName: "b" })],
+  ["writeSensitive", "hr.employee.write_sensitive", () => writeSensitive(none, "x", {})],
+  ["addEmployment", "hr.employment.write", () => addEmployment(none, { employeeId: "x", validFrom: "2026-01-01", contractType: "FULL_TIME", weeklyHours: "40" })],
+  ["closeEmployment", "hr.employment.write", () => closeEmployment(none, "x", "2026-01-01")],
+  ["addLeaveEntry", "hr.leave.write", () => addLeaveEntry(none, { employeeId: "x", year: 2026, kind: "ENTITLEMENT", days: "1" })],
+  ["requestAbsence", "hr.absence.request", () => requestAbsence(none, { typeKey: "VACATION", startDate: "2026-01-05", endDate: "2026-01-05" })],
+  ["listAbsences(all)", "hr.absence.read_all", () => listAbsences(none, "all")],
+  ["listAbsences(team)", "hr.absence.approve", () => listAbsences({ ...none, userId: "nobody" }, "team")],
   ["publishPolicy", "org.settings.manage", () => publishPolicy(none, [])],
   ["readPolicy", "org.settings.manage", () => readPolicy(none)],
 ];
@@ -58,8 +69,19 @@ describe("Autorisierungsmatrix: Rollen", () => {
     expect(roles("org.members.manage")).toEqual(["owner"]);
     expect(roles("org.audit.read")).toEqual(["finance", "owner"]);
   });
-  it("Sensible HR-Daten sieht nur der Inhaber", () => {
-    expect(roles("hr.employee.read_sensitive")).toEqual(["owner"]);
+  it("Sensible HR-Daten sehen nur Inhaber und Personalwesen – nicht Führungskräfte, Finanzen oder Mitarbeiter", () => {
+    expect(roles("hr.employee.read_sensitive")).toEqual(["hr", "owner"]);
+    expect(roles("hr.employee.write_sensitive")).toEqual(["hr", "owner"]);
+    expect(roles("hr.employment.read")).toEqual(["hr", "owner"]); // Wochenstunden/Vertragsart
+  });
+  it("Urlaubskonto buchen und alle Abwesenheiten sehen: Personalwesen und Inhaber", () => {
+    expect(roles("hr.leave.write")).toEqual(["hr", "owner"]);
+    expect(roles("hr.absence.read_all")).toEqual(["hr", "owner"]);
+    expect(roles("hr.absence.approve_all")).toEqual(["hr", "owner"]);
+    expect(roles("hr.absence.approve")).toEqual(["hr", "manager", "owner"]); // Führungskraft nur für das eigene Team (Service prüft)
+  });
+  it("jeder Benutzer mit einer Rolle darf Abwesenheit beantragen", () => {
+    expect(roles("hr.absence.request")).toEqual(["employee", "finance", "hr", "manager", "owner"]);
   });
   it("Freigabe: Führungskraft und Inhaber für Schritt 1, Finanzen und Inhaber für Schritt 2", () => {
     expect(roles("procurement.request.approve")).toEqual(["manager", "owner"]);
@@ -67,7 +89,7 @@ describe("Autorisierungsmatrix: Rollen", () => {
   });
   it("Mitarbeiter dürfen nur anfordern und Stammdaten lesen – nichts schreiben oder freigeben", () => {
     const perms = SYSTEM_ROLES.employee!.permissions;
-    expect(perms.filter((p) => !p.endsWith(".read") && p !== "procurement.request.create")).toEqual([]);
+    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request"].includes(p))).toEqual([]);
   });
   it("Budgets ändern dürfen nur Finanzen und Inhaber", () => {
     expect(roles("finance.budget.write")).toEqual(["finance", "owner"]);

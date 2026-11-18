@@ -17,7 +17,16 @@ export const PERMISSIONS = [
   "finance.budget.read",
   "finance.budget.write",
   "hr.employee.read",
+  "hr.employee.write",
   "hr.employee.read_sensitive",
+  "hr.employee.write_sensitive",
+  "hr.employment.read",
+  "hr.employment.write",
+  "hr.leave.write",
+  "hr.absence.request",
+  "hr.absence.read_all",
+  "hr.absence.approve",
+  "hr.absence.approve_all",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -40,6 +49,25 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "procurement.order.create",
       "finance.budget.read",
       "finance.budget.write",
+      "hr.absence.request",
+    ],
+  },
+  hr: {
+    name: "Personal",
+    permissions: [
+      "master.department.read",
+      "master.costcenter.read",
+      "hr.employee.read",
+      "hr.employee.write",
+      "hr.employee.read_sensitive",
+      "hr.employee.write_sensitive",
+      "hr.employment.read",
+      "hr.employment.write",
+      "hr.leave.write",
+      "hr.absence.request",
+      "hr.absence.read_all",
+      "hr.absence.approve",
+      "hr.absence.approve_all",
     ],
   },
   manager: {
@@ -53,10 +81,12 @@ export const SYSTEM_ROLES: Record<string, { name: string; permissions: readonly 
       "procurement.request.read_all",
       "finance.budget.read",
       "hr.employee.read",
+      "hr.absence.request",
+      "hr.absence.approve",
     ],
   },
   employee: {
     name: "Mitarbeiter",
-    permissions: ["master.department.read", "master.costcenter.read", "procurement.request.create"],
+    permissions: ["master.department.read", "master.costcenter.read", "procurement.request.create", "hr.absence.request"],
   },
 };

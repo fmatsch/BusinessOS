@@ -27,20 +27,23 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships     OrganizationMembership[]
-  roles           Role[]
-  departments     Department[]
-  costCenters     CostCenter[]
-  suppliers       Supplier[]
+  memberships      OrganizationMembership[]
+  roles            Role[]
+  departments      Department[]
+  costCenters      CostCenter[]
+  suppliers        Supplier[]
   purchaseRequests PurchaseRequest[]
-  purchaseOrders  PurchaseOrder[]
-  budgets         Budget[]
-  approvals       Approval[]
-  sequences       Sequence[]
+  purchaseOrders   PurchaseOrder[]
+  budgets          Budget[]
+  approvals        Approval[]
+  sequences        Sequence[]
   approvalPolicies ApprovalPolicy[]
-  auditLogs       AuditLog[]
-  outbox          OutboxEvent[]
-  notifications   Notification[]
+  employees        Employee[]
+  absenceTypes     AbsenceType[]
+  absenceRequests  AbsenceRequest[]
+  auditLogs        AuditLog[]
+  outbox           OutboxEvent[]
+  notifications    Notification[]
 
   @@index([tenantId])
 }
@@ -86,8 +89,8 @@ model Role {
 }
 
 model Permission {
-  id    String @id @default(cuid())
-  key   String @unique // modul.ressource.aktion
+  id  String @id @default(cuid())
+  key String @unique // modul.ressource.aktion
 
   roles RolePermission[]
 }
@@ -168,25 +171,27 @@ model Department {
   updatedAt      DateTime     @updatedAt
 
   costCenters CostCenter[]
+  employees   Employee[]
 
   @@unique([organizationId, code])
 }
 
 model CostCenter {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   code           String
   name           String
   departmentId   String?
-  department     Department?   @relation(fields: [departmentId], references: [id])
-  active         Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   budgets        Budget[]
   purchaseOrders PurchaseOrder[]
   requests       PurchaseRequest[]
+  employments    Employment[]
 
   @@unique([organizationId, code])
 }
@@ -231,12 +236,12 @@ model PurchaseRequest {
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
 
-  submittedAt    DateTime?
+  submittedAt   DateTime?
   /// Version der Freigaberegel, die beim Einreichen galt (unveränderlich)
-  policyVersion  Int?
-  lines          PurchaseRequestLine[]
-  orders         PurchaseOrder[]
-  approvals      Approval[]
+  policyVersion Int?
+  lines         PurchaseRequestLine[]
+  orders        PurchaseOrder[]
+  approvals     Approval[]
 
   @@unique([organizationId, number])
   @@index([organizationId, status])
@@ -292,22 +297,26 @@ enum ApprovalStatus {
 }
 
 model Approval {
-  id             String          @id @default(cuid())
-  organizationId String
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  requestId      String
-  request        PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  stepKey        String
-  label          String          @default("")
+  id                 String           @id @default(cuid())
+  organizationId     String
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// genau eines von requestId / absenceRequestId ist gesetzt (CHECK-Constraint in der Migration)
+  requestId          String?
+  request            PurchaseRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  absenceRequestId   String?
+  absenceRequest     AbsenceRequest?  @relation(fields: [absenceRequestId], references: [id], onDelete: Cascade)
+  stepKey            String
+  label              String           @default("")
   /// Schnappschuss der nötigen Berechtigung aus der Freigaberegel
   requiredPermission String
-  sequence       Int
-  status         ApprovalStatus  @default(PENDING)
-  decidedById    String?
-  decidedAt      DateTime?
-  comment        String?
+  sequence           Int
+  status             ApprovalStatus   @default(PENDING)
+  decidedById        String?
+  decidedAt          DateTime?
+  comment            String?
 
   @@unique([requestId, sequence])
+  @@unique([absenceRequestId, sequence])
   @@index([organizationId, status])
 }
 
@@ -333,4 +342,133 @@ model ApprovalPolicy {
   createdAt      DateTime     @default(now())
 
   @@unique([organizationId, subjectType, version])
+}
+
+// ───────── HR-Basis (M7) ─────────
+
+model Employee {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  number         String
+  firstName      String
+  lastName       String
+  email          String?
+  jobTitle       String?
+  departmentId   String?
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  /// direkte Führungskraft (für Team-Sichtbarkeit und Abwesenheitsfreigabe)
+  managerId      String?
+  manager        Employee?    @relation("EmployeeManager", fields: [managerId], references: [id])
+  reports        Employee[]   @relation("EmployeeManager")
+  /// optionale Verknüpfung zum Benutzerkonto
+  userId         String?
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  sensitive    EmployeeSensitive?
+  employments  Employment[]
+  absences     AbsenceRequest[]
+  leaveEntries LeaveBalanceEntry[]
+
+  @@unique([organizationId, number])
+  @@unique([organizationId, userId])
+  @@index([organizationId, managerId])
+}
+
+/// Getrennt gespeicherte, besonders schützenswerte Angaben (eigene Berechtigung, Zugriffe werden protokolliert)
+model EmployeeSensitive {
+  employeeId       String    @id
+  employee         Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  organizationId   String
+  birthDate        DateTime? @db.Date
+  addressLine      String?
+  phone            String?
+  emergencyContact String?
+  updatedAt        DateTime  @updatedAt
+}
+
+model Employment {
+  id             String      @id @default(cuid())
+  organizationId String
+  employeeId     String
+  employee       Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  validFrom      DateTime    @db.Date
+  validTo        DateTime?   @db.Date
+  contractType   String // FULL_TIME | PART_TIME | MARGINAL | APPRENTICE | OTHER
+  weeklyHours    Decimal     @db.Decimal(5, 2)
+  costCenterId   String?
+  costCenter     CostCenter? @relation(fields: [costCenterId], references: [id])
+  createdAt      DateTime    @default(now())
+
+  @@index([organizationId, employeeId, validFrom])
+}
+
+model AbsenceType {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key              String
+  name             String
+  /// zieht vom Urlaubskonto ab
+  deductsLeave     Boolean      @default(false)
+  requiresApproval Boolean      @default(true)
+
+  requests AbsenceRequest[]
+
+  @@unique([organizationId, key])
+}
+
+enum AbsenceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model AbsenceRequest {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  typeId         String
+  type           AbsenceType   @relation(fields: [typeId], references: [id])
+  startDate      DateTime      @db.Date
+  endDate        DateTime      @db.Date
+  /// Arbeitstage (Mo–Fr ohne gesetzliche Feiertage), beim Antrag berechnet
+  days           Decimal       @db.Decimal(6, 2)
+  status         AbsenceStatus @default(PENDING)
+  /// bewusst nur ein freier Hinweis – bei Krankheit keine Diagnosen erfassen
+  note           String?
+  policyVersion  Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  approvals    Approval[]
+  leaveEntries LeaveBalanceEntry[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, employeeId, startDate])
+}
+
+/// Urlaubskonto als Journal: append-only (DB-Trigger verbietet UPDATE/DELETE). Saldo = Summe der Einträge je Jahr.
+model LeaveBalanceEntry {
+  id               String          @id @default(cuid())
+  organizationId   String
+  employeeId       String
+  employee         Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  year             Int
+  /// ENTITLEMENT | CARRYOVER | ADJUSTMENT | TAKEN | REVERSAL
+  kind             String
+  /// vorzeichenbehaftet: Anspruch +, Verbrauch −
+  days             Decimal         @db.Decimal(6, 2)
+  absenceRequestId String?
+  absenceRequest   AbsenceRequest? @relation(fields: [absenceRequestId], references: [id])
+  note             String?
+  createdById      String?
+  createdAt        DateTime        @default(now())
+
+  @@index([organizationId, employeeId, year])
 }

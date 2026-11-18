@@ -2,9 +2,10 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { authorize, type Ctx } from "@/platform/authz/authorize";
 import { writeAudit } from "@/platform/audit/audit";
-import { DEFAULT_PURCHASE_POLICY, policyStepsSchema, type PolicyStep } from "./engine";
+import { DEFAULT_POLICIES, policyStepsSchema, type PolicyStep } from "./engine";
 
 export const PURCHASE_REQUEST = "PURCHASE_REQUEST";
+export const ABSENCE_REQUEST = "ABSENCE_REQUEST";
 
 export interface ActivePolicy {
   version: number;
@@ -16,8 +17,10 @@ export async function getActivePolicy(tx: Prisma.TransactionClient, organization
   const latest = await tx.approvalPolicy.findFirst({ where: { organizationId, subjectType }, orderBy: { version: "desc" } });
   if (latest) return { version: latest.version, steps: policyStepsSchema.parse(latest.steps) };
   // skipDuplicates statt Fangen von P2002: ein Fehler würde die Postgres-Transaktion abbrechen
+  const defaults = DEFAULT_POLICIES[subjectType];
+  if (!defaults) throw new Error(`Keine Standardregel für ${subjectType}`);
   await tx.approvalPolicy.createMany({
-    data: [{ organizationId, subjectType, version: 1, steps: DEFAULT_PURCHASE_POLICY as unknown as Prisma.InputJsonValue }],
+    data: [{ organizationId, subjectType, version: 1, steps: defaults as unknown as Prisma.InputJsonValue }],
     skipDuplicates: true,
   });
   const first = await tx.approvalPolicy.findFirstOrThrow({ where: { organizationId, subjectType }, orderBy: { version: "desc" } });

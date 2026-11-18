@@ -11,7 +11,8 @@ const NAV = [
   { href: "/cost-centers", key: "nav.costcenters", live: true },
   { href: "/budgets", key: "nav.budgets", live: true },
   { href: "/planned/finance", key: "nav.finance" },
-  { href: "/planned/hr", key: "nav.hr" },
+  { href: "/hr", key: "nav.hr", live: true },
+  { href: "/absences", key: "nav.absences", live: true },
   { href: "/procurement", key: "nav.procurement", live: true },
   { href: "/suppliers", key: "nav.suppliers", live: true },
   { href: "/planned/inventory", key: "nav.inventory" },
@@ -60,8 +61,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <button name="lang" value="de" className="rounded px-2 py-1 hover:bg-bg" aria-pressed={locale === "de"}>DE</button>
               <button name="lang" value="en" className="rounded px-2 py-1 hover:bg-bg" aria-pressed={locale === "en"}>EN</button>
             </form>
-            <Link href="/notifications" className="rounded px-2 py-1 hover:bg-bg" aria-label={unread > 0 ? `Benachrichtigungen, ${unread} ungelesen` : "Benachrichtigungen"}>
-              Benachrichtigungen{unread > 0 && <span className="ml-1 rounded-full bg-accent px-2 py-0.5 text-xs text-accent-fg" data-testid="unread-count">{unread}</span>}
+            <Link href="/notifications" className="rounded px-2 py-1 hover:bg-bg">
+              Benachrichtigungen{unread > 0 && <span className="ml-1 rounded-full bg-accent px-2 py-0.5 text-xs text-accent-fg" data-testid="unread-count">{unread}<span className="sr-only"> ungelesen</span></span>}
             </Link>
             <span className="text-muted">{ctx.userName}</span>
             <form action={logout}><button className="rounded-md border border-line px-2 py-1">{t(locale, "logout")}</button></form>
