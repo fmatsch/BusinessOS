@@ -28,13 +28,16 @@ export async function requireContext(): Promise<AppContext> {
   const memberships = await db.organizationMembership.findMany({
     where: { userId, user: { active: true } },
     include: {
-      user: { select: { name: true } },
+      user: { select: { name: true, sessionVersion: true } },
       organization: true,
       role: { include: { permissions: { include: { permission: true } } } },
     },
     orderBy: { createdAt: "asc" },
   });
   if (memberships.length === 0) redirect("/login");
+  // Sitzungen vor einem Passwortwechsel/-reset sind ungültig
+  const sv = (session.user as { sv?: number }).sv ?? 0;
+  if (memberships[0]!.user.sessionVersion !== sv) redirect("/login");
 
   const wanted = (await cookies()).get(ORG_COOKIE)?.value;
   const active = memberships.find((m) => m.organizationId === wanted) ?? memberships[0]!;

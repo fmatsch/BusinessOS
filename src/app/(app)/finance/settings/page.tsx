@@ -4,7 +4,7 @@ import { requireContext } from "@/platform/tenancy/context";
 import { can } from "@/platform/authz/authorize";
 import {
   createAccount, createCustomer, createTaxCode, getAccountingProfile, getIssuerProfile, importAccounts, listAccounts, listCustomers, listTaxCodes, setAccountingProfile, setIssuerProfile,
-  setCustomerAccounts, setSupplierAccounts, updateTaxMapping,
+  setCustomerAccounts, setCustomerEinvoiceEndpoint, setSupplierAccounts, updateTaxMapping,
 } from "@/modules/finance/service";
 import { ErrorBanner, runAction } from "../../action-helpers";
 
@@ -16,7 +16,7 @@ async function importAction(fd: FormData) { "use server"; const ctx = await requ
 async function addTax(fd: FormData) { "use server"; const ctx = await requireContext(); await runAction(BACK, () => createTaxCode(ctx, { key: fd.get("key"), name: fd.get("name"), rate: fd.get("rate"), direction: fd.get("direction"), bmdCode: fd.get("bmdCode"), datevKey: fd.get("datevKey") })); revalidatePath(BACK); }
 async function mapTax(fd: FormData) { "use server"; const ctx = await requireContext(); await runAction(BACK, () => updateTaxMapping(ctx, String(fd.get("id")), { bmdCode: fd.get("bmdCode"), datevKey: fd.get("datevKey") })); revalidatePath(BACK); }
 async function supplierAcc(fd: FormData) { "use server"; const ctx = await requireContext(); await runAction(BACK, () => setSupplierAccounts(ctx, String(fd.get("id")), { uid: fd.get("uid"), accountId: fd.get("accountId"), lineAccountId: fd.get("lineAccountId") })); revalidatePath(BACK); }
-async function customerAcc(fd: FormData) { "use server"; const ctx = await requireContext(); await runAction(BACK, () => setCustomerAccounts(ctx, String(fd.get("id")), { uid: fd.get("uid"), accountId: fd.get("accountId"), lineAccountId: fd.get("lineAccountId") })); revalidatePath(BACK); }
+async function customerAcc(fd: FormData) { "use server"; const ctx = await requireContext(); await runAction(BACK, async () => { await setCustomerAccounts(ctx, String(fd.get("id")), { uid: fd.get("uid"), accountId: fd.get("accountId"), lineAccountId: fd.get("lineAccountId") }); await setCustomerEinvoiceEndpoint(ctx, String(fd.get("id")), String(fd.get("endpoint") ?? "")); }); revalidatePath(BACK); }
 async function addCustomer(fd: FormData) { "use server"; const ctx = await requireContext(); await runAction(BACK, () => createCustomer(ctx, { number: fd.get("number"), name: fd.get("name"), street: fd.get("street"), zip: fd.get("zip"), city: fd.get("city"), uid: fd.get("uid"), paymentTermsDays: fd.get("paymentTermsDays") || 14 })); revalidatePath(BACK); }
 async function saveProfile(fd: FormData) {
   "use server";
@@ -217,6 +217,7 @@ export default async function FinanceSettings({ searchParams }: { searchParams: 
                   {sel(c.receivableAccountId, debtors, "accountId", "Debitor")}
                   {sel(c.revenueAccountId, gl, "lineAccountId", "Standard-Erlöskonto")}
                   <label>UID<input name="uid" defaultValue={c.uid ?? ""} maxLength={20} className={input} /></label>
+                  <label>E-Rechnung-Adresse<input name="endpoint" defaultValue={c.einvoiceEndpoint ?? ""} maxLength={120} placeholder="E-Mail oder 9915:Kennung" className={input} /></label>
                   {writer && <button className="rounded-md border border-line px-2 py-1">Speichern</button>}
                 </form>
               </li>

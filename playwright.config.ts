@@ -14,6 +14,8 @@ export default defineConfig({
   testDir: "tests/e2e",
   workers: 1, // gemeinsame Datenbank, Szenarien bauen aufeinander auf
   timeout: 60_000,
+  // Die Finanz-Einstellungen rendern bei vielen angesammelten Testdaten (Konten × Kunden × Auswahllisten) mehrere Sekunden
+  expect: { timeout: 15_000 },
   reporter: [["list"]],
   use: {
     baseURL: `http://localhost:${port}`,

@@ -33,6 +33,7 @@ const NAV = [
   { href: "/copilot", key: "nav.copilot", live: true },
   { href: "/audit", key: "nav.audit", live: true },
   { href: "/settings/approvals", key: "nav.approvals", live: true },
+  { href: "/settings/api", key: "nav.api", live: true },
 ] as const;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

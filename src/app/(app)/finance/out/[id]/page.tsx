@@ -52,6 +52,7 @@ export default async function CustomerInvoicePage({ params, searchParams }: { pa
         {inv.status === "DRAFT" && can(ctx, "finance.invoice.out.issue") && <form action={issue}><input type="hidden" name="id" value={inv.id} /><button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Ausstellen (Nummer vergeben)</button></form>}
         {inv.status === "DRAFT" && can(ctx, "finance.invoice.out.create") && <form action={discard}><input type="hidden" name="id" value={inv.id} /><button className={secondary}>Entwurf verwerfen</button></form>}
         {inv.status === "ISSUED" && <a href={`/finance/out/${inv.id}/pdf`} target="_blank" rel="noopener" className={secondary}>PDF öffnen</a>}
+        {inv.status === "ISSUED" && <a href={`/finance/out/${inv.id}/xml`} className={secondary}>E-Rechnung (XML)</a>}
         {inv.status === "ISSUED" && inv.kind === "INVOICE" && can(ctx, "finance.invoice.out.create") && <form action={credit}><input type="hidden" name="id" value={inv.id} /><button className={secondary}>Gutschrift anlegen</button></form>}
         {inv.status === "ISSUED" && !inv.paidOn && can(ctx, "finance.invoice.out.issue") && (
           <form action={paid} className="flex items-end gap-2"><input type="hidden" name="id" value={inv.id} />

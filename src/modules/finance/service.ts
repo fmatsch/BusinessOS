@@ -147,6 +147,18 @@ export async function setCustomerAccounts(ctx: Ctx, customerId: string, raw: unk
   });
 }
 
+/** Elektronische Adresse des Kunden für die E-Rechnung (E-Mail oder Peppol-ID `9915:Kennung`); leer entfernt sie. */
+export async function setCustomerEinvoiceEndpoint(ctx: Ctx, customerId: string, endpoint: string) {
+  authorize(ctx, "finance.master.write");
+  const value = endpoint.trim();
+  if (value && !(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || /^\d{4}:\S+$/.test(value))) throw new ConflictError("Bitte eine E-Mail-Adresse oder eine Peppol-ID im Format 9915:Kennung angeben");
+  return db.$transaction(async (tx) => {
+    const r = await tx.customer.updateMany({ where: { id: customerId, organizationId: ctx.organizationId }, data: { einvoiceEndpoint: value || null } });
+    if (r.count !== 1) throw new NotFoundError("Kunde");
+    await writeAudit(tx, ctx, { action: "customer.einvoice_endpoint", entityType: "Customer", entityId: customerId });
+  });
+}
+
 export const DEFAULT_ACCOUNTING_PROFILE = { format: "BMD", advisorNumber: null, clientNumber: null, accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", dictationCode: "", includeFiles: true, matchTolerancePercent: "2", matchToleranceAmount: "5" } as const;
 
 export async function getAccountingProfile(ctx: Ctx, tx: Tx | typeof db = db) {
@@ -450,6 +462,7 @@ export async function createCustomerInvoiceDraftTx(tx: Tx, ctx: Ctx, raw: unknow
   return createCustomerInvoiceTx(tx, ctx, customerInvoiceInput.parse(raw));
 }
 
+import { eInvoiceProblems, renderUbl, type EInvoiceInput } from "./einvoice";
 export { renderInvoicePdf, type IssuerDetails } from "./invoice-pdf";
 /** Für andere Module (Analysen): Offene Posten und Altersklassen. */
 export { listOpenItems } from "./receivables";
@@ -566,6 +579,30 @@ export async function getCustomerInvoice(ctx: Ctx, id: string) {
     db.account.findMany({ where: { organizationId: ctx.organizationId, id: { in: inv.lines.map((l) => l.revenueAccountId) } } }),
   ]);
   return { ...inv, exported, taxCodes, accounts };
+}
+
+/**
+ * E-Rechnung (UBL/Peppol BIS 3.0) einer ausgestellten Ausgangsrechnung oder Gutschrift. Aussteller-Angaben aus dem Snapshot am Beleg.
+ * `problems` nennt fehlende Angaben; `xml` ist nur gesetzt, wenn keine Probleme bestehen.
+ */
+export async function getCustomerInvoiceEInvoice(ctx: Ctx, id: string) {
+  const inv = await getCustomerInvoice(ctx, id); // prüft finance.invoice.read und Mandant
+  if (inv.status !== "ISSUED" || !inv.number) throw new ConflictError("Eine E-Rechnung gibt es erst für ausgestellte Belege");
+  const orig = inv.creditsId ? await db.customerInvoice.findFirst({ where: { id: inv.creditsId, organizationId: ctx.organizationId }, select: { number: true } }) : null;
+  const org = await db.organization.findFirst({ where: { id: ctx.organizationId }, select: { name: true } });
+  const snap = (inv.issuerSnapshot ?? null) as IssuerDetails | null;
+  const rate = new Map(inv.taxCodes.map((t) => [t.id, t.rate.toString()]));
+  const input: EInvoiceInput = {
+    number: inv.number, kind: inv.kind === "CREDIT" ? "CREDIT" : "INVOICE", creditsNumber: orig?.number ?? null,
+    invoiceDate: isoFromDate(inv.invoiceDate), dueDate: inv.dueDate ? isoFromDate(inv.dueDate) : null, currency: inv.currency,
+    seller: snap ?? { legalName: org?.name ?? "" },
+    buyer: { number: inv.customer.number, name: inv.customer.name, street: inv.customer.street, zip: inv.customer.zip, city: inv.customer.city, country: inv.customer.country, uid: inv.customer.uid, endpoint: inv.customer.einvoiceEndpoint },
+    lines: inv.lines.map((l) => ({ description: l.description, quantity: l.quantity.toString(), unitPrice: l.unitPrice.toString(), netAmount: l.netAmount.toString(), taxRate: rate.get(l.taxCodeId) ?? "0" })),
+    netTotal: inv.netTotal.toString(), taxTotal: inv.taxTotal.toString(), grossTotal: inv.grossTotal.toString(),
+    note: inv.kind === "CREDIT" ? null : inv.note,
+  };
+  const problems = eInvoiceProblems(input);
+  return { filename: `${inv.number}.xml`, problems, xml: problems.length === 0 ? renderUbl(input) : null };
 }
 
 /** PDF einer ausgestellten Ausgangsrechnung oder Gutschrift (Entwürfe haben keine Nummer und kein PDF). */

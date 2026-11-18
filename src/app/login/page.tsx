@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn } from "@/platform/auth/auth";
@@ -8,22 +9,24 @@ async function login(formData: FormData) {
     await signIn("credentials", {
       email: String(formData.get("email") ?? ""),
       password: String(formData.get("password") ?? ""),
+      code: String(formData.get("code") ?? ""),
       redirectTo: "/",
     });
   } catch (e) {
-    if (e instanceof AuthError) redirect("/login?error=1");
+    if (e instanceof AuthError) redirect(`/login?error=${(e as { code?: string }).code === "mfa_required" ? "mfa" : "1"}`);
     throw e; // Redirect-Signal von Next.js weiterreichen
   }
 }
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; reset?: string }> }) {
+  const { error, reset } = await searchParams;
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">BusinessOS</h1>
         <p className="text-sm text-muted">Anmelden / Sign in</p>
       </div>
+      {reset && <p role="status" className="text-sm">Das Passwort wurde geändert. Bitte melden Sie sich neu an.</p>}
       <form action={login} className="flex flex-col gap-3">
         <label className="text-sm">
           E-Mail
@@ -35,9 +38,16 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <input name="password" type="password" required autoComplete="current-password"
             className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2" />
         </label>
-        {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">Anmeldung fehlgeschlagen.</p>}
+        <label className="text-sm">
+          Bestätigungscode (nur bei aktivierter Zwei-Faktor-Anmeldung)
+          <input name="code" type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={20} placeholder="123456 oder Wiederherstellungscode"
+            className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2" />
+        </label>
+        {error === "mfa" && <p role="alert" className="text-sm text-red-700 dark:text-red-400">Bitte geben Sie zusätzlich den Bestätigungscode Ihrer Authenticator-App ein.</p>}
+        {error === "1" && <p role="alert" className="text-sm text-red-700 dark:text-red-400">Anmeldung fehlgeschlagen.</p>}
         <button className="rounded-lg bg-accent px-3 py-2 font-medium text-accent-fg">Anmelden</button>
       </form>
+      <p className="text-sm"><Link className="text-accent underline" href="/forgot">Passwort vergessen?</Link></p>
     </main>
   );
 }

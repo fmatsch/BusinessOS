@@ -93,6 +93,12 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Hauptbuch**
 `GlSettings` (Startdatum, Bankkonto), `AccountingPeriod`, `JournalEntry` (Nummer, Quelle, `sourceId` eindeutig je Quelle, `reversesId`) und `JournalLine` (Soll/Haben, Kostenstelle, Steuerkennzeichen, Steuerrolle). Append-only per Trigger; Soll = Haben je Satz per Constraint-Trigger; `Account.kind`, `TaxCode.vatAccountId/uvaBaseCode/uvaTaxCode`.
 
+**Konto-Sicherheit**
+`UserMfa` (verschlüsseltes TOTP-Geheimnis, letzter Zeitschritt, Hashes der Wiederherstellungscodes), `PasswordResetToken` (nur Hash, Verfall, einmalig), `User.sessionVersion` (Sitzungen mit älterer Version sind ungültig).
+
+**API**
+`ApiToken` (nur SHA-256-Hash, Präfix zur Wiedererkennung, Ablauf, Widerruf, letzter Zugriff); `Customer.einvoiceEndpoint` (elektronische Adresse für die E-Rechnung).
+
 **Qualität und Instandhaltung**
 `InspectionPlan`/`InspectionCharacteristic` (Version, aktive gesperrt), `Inspection`/`InspectionResult` (nach Entscheid per Trigger unveränderlich), `NonConformance`; `MaintenanceObject`, `MaintenancePlan`, `MaintenanceOrder` (abgeschlossene unveränderlich; je Plan höchstens ein offener Auftrag per Teilindex), `MaintenancePart` (append-only, verweist auf die Lagerbewegungen).
 

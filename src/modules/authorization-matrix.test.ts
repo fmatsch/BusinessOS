@@ -372,6 +372,9 @@ describe("Autorisierungsmatrix: Rollen", () => {
     expect(roles("payroll.calc.approve")).toEqual(["owner"]);
     expect(roles("payroll.params.manage")).toEqual(["hr", "owner"]);
   });
+  it("API-Tokens verwalten darf nur der Inhaber", () => {
+    expect(roles("api.token.manage")).toEqual(["owner"]);
+  });
   it("Budgets ändern dürfen nur Finanzen und Inhaber", () => {
     expect(roles("finance.budget.write")).toEqual(["finance", "owner"]);
   });

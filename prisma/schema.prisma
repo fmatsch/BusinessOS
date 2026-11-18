@@ -56,10 +56,41 @@ model User {
   passwordHash String
   locale       String   @default("de")
   active       Boolean  @default(true)
+  /// Wird bei Passwortwechsel/-reset erhöht; ältere Sitzungen sind damit ungültig
+  sessionVersion Int    @default(0)
   createdAt    DateTime @default(now())
 
   memberships OrganizationMembership[]
+  mfa         UserMfa?
+  resetTokens PasswordResetToken[]
 }
+
+/// Zwei-Faktor-Anmeldung (TOTP) je Konto. Geheimnis verschlüsselt (AES-256-GCM), Wiederherstellungscodes nur als SHA-256-Hash.
+model UserMfa {
+  userId         String    @id
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secretEnc      String
+  /// leer = Einrichtung noch nicht bestätigt
+  enabledAt      DateTime?
+  /// zuletzt akzeptierter Zeitschritt (Schutz gegen Wiederverwendung)
+  lastUsedStep   Int       @default(0)
+  recoveryHashes String[]
+  createdAt      DateTime  @default(now())
+}
+
+/// Einmal-Link zum Zurücksetzen des Passworts (nur Hash, 60 Minuten gültig)
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
 
 model OrganizationMembership {
   id             String       @id @default(cuid())
@@ -935,6 +966,8 @@ model Customer {
   paymentTermsDays    Int      @default(14)
   receivableAccountId String?
   revenueAccountId    String?
+  /// Elektronische Adresse für die E-Rechnung: E-Mail oder Peppol-ID im Format 9915:Kennung
+  einvoiceEndpoint    String?
   active              Boolean  @default(true)
   createdAt           DateTime @default(now())
 
@@ -1077,6 +1110,26 @@ model JournalLine {
 
   @@index([accountId])
   @@index([entryId])
+}
+
+// ───────── REST-API ─────────
+
+/// API-Token für die lesende REST-API. Nur der SHA-256-Hash wird gespeichert; das Token wird einmalig angezeigt.
+/// Das Token handelt als der erstellende Benutzer in genau dieser Organisation (mit dessen Berechtigungen).
+model ApiToken {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  name           String
+  /// erste Zeichen zur Wiedererkennung in der Liste
+  prefix         String
+  tokenHash      String    @unique
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId])
 }
 
 // ───────── Qualitätsmanagement ─────────

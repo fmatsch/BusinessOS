@@ -100,6 +100,7 @@ export const PERMISSIONS = [
   "maint.manage",
   "maint.report",
   "maint.work",
+  "api.token.manage",
   "workflow.read",
   "workflow.manage",
   "analytics.read",
