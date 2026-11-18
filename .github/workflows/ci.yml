@@ -28,3 +28,11 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx tsx prisma/seed.ts
+        env:
+          SEED_DEMO_PASSWORD: ci-demo-password-12345
+      - run: npx playwright test
+        env:
+          CI: "true"
+          SEED_DEMO_PASSWORD: ci-demo-password-12345

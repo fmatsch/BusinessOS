@@ -83,7 +83,7 @@ export default async function RequestDetail({ params, searchParams }: { params: 
           <input type="hidden" name="requestId" value={r.id} />
           <label className="block">Kommentar (optional)<input name="comment" maxLength={500} className={input + " w-full"} /></label>
           <div className="flex gap-2">
-            <button name="decision" value="APPROVE" className="rounded-md bg-accent px-3 py-1.5 font-medium text-white">Freigeben ({STEP[nextStep!.stepKey]})</button>
+            <button name="decision" value="APPROVE" className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Freigeben ({STEP[nextStep!.stepKey]})</button>
             <button name="decision" value="REJECT" className="rounded-md border border-line px-3 py-1.5">Ablehnen</button>
           </div>
         </form>
@@ -107,7 +107,7 @@ export default async function RequestDetail({ params, searchParams }: { params: 
               </select>
             </label>
           </div>
-          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-white">Bestellen</button>
+          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Bestellen</button>
         </form>
       )}
 

@@ -25,9 +25,9 @@ prisma/                schema.prisma, Migrationen, seed.ts
 ```
 
 ### Modulgrenzen
-* Ein Modul importiert **nie** die Prisma-Modelle oder Services eines anderen Moduls direkt, sondern nur dessen öffentliche API (`modules/<domain>/index.ts`) oder reagiert auf Domain Events.
+* Ein Modul spricht andere Module nur über deren `service.ts` oder `queries.ts` an oder reagiert auf Domain Events.
 * `platform/*` darf von allen genutzt werden, importiert aber keine Fach-Module.
-* Das wird per ESLint-Regel (`no-restricted-imports`) erzwungen.
+* Erzwungen durch `src/architecture.test.ts` (kein ESLint).
 
 ### Request-Fluss
 1. Route / Server Action ruft `requireContext()` → liefert `{ userId, organizationId, permissions }` aus Session + Mitgliedschaft (immer frisch aus der DB geprüft, nicht blind aus dem Token).

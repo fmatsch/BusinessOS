@@ -67,7 +67,7 @@ export default async function ProcurementPage({ searchParams }: { searchParams: 
             ))}
           </div>
           <p className="text-muted">Über 5.000 {ctx.currency} ist zusätzlich die Freigabe durch Finanzen nötig.</p>
-          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-white">Einreichen</button>
+          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Einreichen</button>
         </form>
       </section>
 

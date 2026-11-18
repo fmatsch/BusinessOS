@@ -39,7 +39,7 @@ export default async function BudgetsPage({ searchParams }: { searchParams: Prom
             </select>
           </label>
           <label>Budget ({ctx.currency})<input name="amount" required inputMode="decimal" className={input} /></label>
-          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-white">Speichern</button>
+          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Speichern</button>
         </form>
       )}
       {rows.length === 0 ? <p className="text-sm text-muted">Noch keine Kostenstellen.</p> : (
@@ -51,7 +51,7 @@ export default async function BudgetsPage({ searchParams }: { searchParams: Prom
                 <td className="py-2">{r.code} · {r.name}</td>
                 <td className="text-right">{r.budget ? formatMoney(r.budget.toString(), ctx.currency) : "kein Budget"}</td>
                 <td className="text-right">{formatMoney(r.committed.toString(), ctx.currency)}</td>
-                <td className={"text-right " + (r.remaining?.isNegative() ? "font-medium text-red-600" : "")}>
+                <td className={"text-right " + (r.remaining?.isNegative() ? "font-medium text-red-700 dark:text-red-400" : "")}>
                   {r.remaining ? formatMoney(r.remaining.toString(), ctx.currency) : "–"}{r.remaining?.isNegative() ? " (überschritten)" : ""}
                 </td>
               </tr>

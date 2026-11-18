@@ -20,7 +20,7 @@ export function CopilotChat() {
           defaultValue={state.question} placeholder="z. B. Wie viel Budget ist in der Kostenstelle IT noch verfügbar?"
           className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm" />
         <div className="flex items-center gap-3">
-          <button disabled={pending} className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+          <button disabled={pending} className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-fg disabled:opacity-60">
             {pending ? "Wird beantwortet …" : "Fragen"}
           </button>
           <span className="text-xs text-muted">Beispiele: {EXAMPLES.join(" · ")}</span>

@@ -37,6 +37,8 @@ async function main() {
   const users = [
     { email: "admin@demo.example", name: "Alex Admin", memberOf: [0, 1], role: "owner" },
     { email: "mitarbeiter@demo.example", name: "Max Mitarbeiter", memberOf: [0], role: "employee" },
+    { email: "fuehrung@demo.example", name: "Franka Führung", memberOf: [0], role: "manager" },
+    { email: "finanzen@demo.example", name: "Finn Finanzen", memberOf: [0], role: "finance" },
   ];
   for (const u of users) {
     const user = await db.user.upsert({ where: { email: u.email }, update: {}, create: { email: u.email, name: u.name, passwordHash } });
@@ -50,7 +52,7 @@ async function main() {
       });
     }
   }
-  console.log("Seed fertig: admin@demo.example (Inhaber, 2 Organisationen), mitarbeiter@demo.example (Mitarbeiter)");
+  console.log("Seed fertig: admin@ (Inhaber, 2 Organisationen), mitarbeiter@, fuehrung@, finanzen@demo.example");
 }
 
 main().finally(() => db.$disconnect());

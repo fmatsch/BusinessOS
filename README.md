@@ -41,8 +41,11 @@ Demo-Login steht in `prisma/seed.ts` (synthetische Daten, nur für lokale Entwic
 
 ```bash
 npm run typecheck
-npm test
+npm test            # Unit- und Integrationstests (Integrationstests brauchen DATABASE_URL, sonst übersprungen)
+npm run build && npm run test:e2e   # Browser-Tests (Playwright); lokal mit installiertem Chrome: PW_CHANNEL=chrome
 ```
+
+Für `test:e2e` muss die Datenbank migriert und mit `npm run db:seed` befüllt sein; `SEED_DEMO_PASSWORD` muss gesetzt sein.
 
 ## Projektseite
 

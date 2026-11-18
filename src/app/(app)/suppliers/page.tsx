@@ -31,7 +31,7 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
           <label>Nummer<input name="number" required maxLength={20} className={input} /></label>
           <label>Name<input name="name" required maxLength={120} className={input} /></label>
           <label>E-Mail<input name="email" type="email" maxLength={200} className={input} /></label>
-          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-white">Anlegen</button>
+          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Anlegen</button>
         </form>
       )}
       {suppliers.length === 0 ? <p className="text-sm text-muted">Noch keine Einträge.</p> : (

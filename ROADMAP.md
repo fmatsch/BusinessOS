@@ -37,7 +37,18 @@ Legende: ✅ fertig und verifiziert · 🚧 in Arbeit · ⬜ geplant
 * ⬜ Schreibende Werkzeuge nur als Vorschlag mit Bestätigung durch den Benutzer
 
 ## Phase 5 – Tests & Härtung
-* ⬜ Unit-, Integrations-, E2E-Tests, Tenant-Isolation, Autorisierung, Finanzkonsistenz, Barrierefreiheit
+* ✅ Unit-Tests (Regeln, Validierung, Rate-Limit, Autorisierung, KI-Schleife)
+* ✅ Integrationstests gegen echte PostgreSQL (Beschaffungsfluss, Parallelität, Rollback)
+* ✅ Tenant-Isolation (Stammdaten, Beschaffung, Budget, KI-Werkzeuge, Browser)
+* ✅ Autorisierungsmatrix: jede Service-Operation verweigert ohne Permission; Rollen-Zuschnitt festgeschrieben
+* ✅ Finanzkonsistenz: Dezimalarithmetik, Summen, Storno, Geschäftsjahresgrenzen, lückenlose Belegnummern bei Parallelität, ungültige Beträge, Rollback
+* ✅ Architekturtests: Modulgrenzen, kein Server-Code im Client-Bundle, keine Geheimnisse in `NEXT_PUBLIC_`, keine Float-Geldberechnung
+* ✅ E2E im Browser (Playwright): kompletter Prozess über vier Rollen, Mandantentrennung, Zugriffsschutz, Login-Fehler, Sicherheits-Header
+* ✅ Barrierefreiheit: axe-core (WCAG 2.0/2.1 A/AA) auf allen Seiten in Hell und Dunkel, Tastaturfokus
+* ✅ Gefunden und behoben: Dark-Mode-CSS war ungültig, Kontrast Button/Fehlertext im Dunkelmodus, CSP-Header fehlte trotz Dokumentation
+* ⚠️ Automatische A11y-Prüfung deckt nur einen Teil ab; kein Screenreader-/manueller Test
+* ⚠️ Keine Lasttests, keine Penetrationstests, kein Dependency-/Secret-Scanning in CI
+* ⚠️ CSP erlaubt `'unsafe-inline'` für Skripte (Next.js ohne Nonce)
 
 ## Danach
 Finance (Doppik), Wareneingang & Rechnungsabgleich, Inventar, HR, Projekte, CRM, Workflow-Designer, Integrationen.

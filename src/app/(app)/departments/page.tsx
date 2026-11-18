@@ -40,7 +40,7 @@ export default async function DepartmentsPage() {
               {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </label>
-          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-white">Anlegen</button>
+          <button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Anlegen</button>
         </form>
       )}
       {departments.length === 0 ? <p className="text-sm text-muted">Noch keine Einträge.</p> : (

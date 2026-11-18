@@ -35,8 +35,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <input name="password" type="password" required autoComplete="current-password"
             className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2" />
         </label>
-        {error && <p role="alert" className="text-sm text-red-600">Anmeldung fehlgeschlagen.</p>}
-        <button className="rounded-lg bg-accent px-3 py-2 font-medium text-white">Anmelden</button>
+        {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">Anmeldung fehlgeschlagen.</p>}
+        <button className="rounded-lg bg-accent px-3 py-2 font-medium text-accent-fg">Anmelden</button>
       </form>
     </main>
   );
