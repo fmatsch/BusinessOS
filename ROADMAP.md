@@ -126,5 +126,5 @@ Entscheidung: kein eigenes Hauptbuch; die Steuerberatung bucht. Detailplan: [FIN
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
 * ⬜ Kundenabrechnung nach Stunden (braucht Projekte und Finance)
-* ⬜ M11 Projekte · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
+* ⬜ M13 Wareneingang und Rechnungsabgleich – Plan: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md) · M11 Projekte · Wareneingang/Rechnungsabgleich · Inventar · CRM · Workflow-Designer · Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security
