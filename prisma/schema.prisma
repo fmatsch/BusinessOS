@@ -1268,7 +1268,7 @@ model CopilotProposal {
 
 // ───────── Lager: Artikel und Bestandsbewegungen ─────────
 
-/// Artikel. Ein Lager je Organisation (keine Lagerorte).
+/// Artikel. Verfolgung: NONE | BATCH (Chargen) | SERIAL (Seriennummern); Bewertung: AVG (gleitender Durchschnitt) | FIFO.
 model Item {
   id             String   @id @default(cuid())
   organizationId String
@@ -1277,11 +1277,16 @@ model Item {
   unit           String   @default("Stk")
   /// Mindestbestand für den Hinweis „nachbestellen“
   reorderLevel   Decimal? @db.Decimal(19, 4)
+  /// NONE | BATCH | SERIAL – nur änderbar, solange keine Bewegungen existieren
+  tracking        String   @default("NONE")
+  /// AVG | FIFO – nur änderbar, solange keine Bewegungen existieren
+  valuationMethod String   @default("AVG")
   active         Boolean  @default(true)
   createdById    String
   createdAt      DateTime @default(now())
 
   movements StockMovement[]
+  batches   StockBatch[]
 
   @@unique([organizationId, number])
 }
@@ -1292,9 +1297,18 @@ model StockMovement {
   organizationId     String
   itemId             String
   item               Item           @relation(fields: [itemId], references: [id])
-  /// RECEIPT (Wareneingang) | ISSUE (Entnahme) | ADJUST (Inventurkorrektur) | REVERSAL (Gegenbuchung)
+  /// RECEIPT (Wareneingang) | ISSUE (Entnahme) | ADJUST (Inventurkorrektur) | REVERSAL (Gegenbuchung) | TRANSFER_OUT / TRANSFER_IN (Umbuchung zwischen Lagerorten)
   kind               String
   quantity           Decimal        @db.Decimal(19, 4)
+  /// Lagerort; leer = „ohne Lagerort“ (Bestand vor Einführung der Lagerorte)
+  locationId         String?
+  batchId            String?
+  /// Seriennummer (Menge dann immer ±1)
+  serial             String?
+  /// Einstandspreis je Einheit (Wareneingang)
+  unitCost           Decimal?       @db.Decimal(19, 6)
+  /// beide Seiten einer Umbuchung tragen dieselbe Kennung
+  transferId         String?
   costCenterId       String?
   /// jede Wareneingangsposition wird höchstens einmal eingebucht
   goodsReceiptLineId String?        @unique
@@ -1306,6 +1320,33 @@ model StockMovement {
   createdAt          DateTime       @default(now())
 
   @@index([organizationId, itemId, createdAt])
+  @@index([organizationId, itemId, locationId, batchId])
+  @@index([organizationId, itemId, serial])
+}
+
+/// Lagerort (z. B. Hauptlager, Regal A-01). Bestand je Lagerort ergibt sich aus dem Journal.
+model StockLocation {
+  id             String   @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, code])
+}
+
+/// Charge eines Artikels (optional mit Ablaufdatum).
+model StockBatch {
+  id             String    @id @default(cuid())
+  organizationId String
+  itemId         String
+  item           Item      @relation(fields: [itemId], references: [id])
+  number         String
+  expiresOn      DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+
+  @@unique([itemId, number])
 }
 
 // ───────── Reisekosten und Spesen ─────────

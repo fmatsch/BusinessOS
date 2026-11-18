@@ -2,7 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireContext } from "@/platform/tenancy/context";
 import { ForbiddenError } from "@/platform/authz/authorize";
-import { listItems, listStockableReceiptLines, stockReceiptLine } from "@/modules/inventory/service";
+import { listItems, listLocations, listStockableReceiptLines, stockReceiptLine } from "@/modules/inventory/service";
 import { ErrorBanner, runAction } from "../../action-helpers";
 
 export const dynamic = "force-dynamic";
@@ -11,15 +11,15 @@ const BACK = "/inventory/receipts";
 async function stock(fd: FormData) {
   "use server";
   const ctx = await requireContext();
-  await runAction(BACK, () => stockReceiptLine(ctx, { goodsReceiptLineId: fd.get("lineId"), itemId: fd.get("itemId") }));
+  await runAction(BACK, () => stockReceiptLine(ctx, { goodsReceiptLineId: fd.get("lineId"), itemId: fd.get("itemId"), locationId: fd.get("locationId"), batchNumber: fd.get("batchNumber"), expiresOn: fd.get("expiresOn"), serials: fd.get("serials") }));
   revalidatePath(BACK);
 }
 
 export default async function ReceiptsToStock({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const ctx = await requireContext();
-  let lines, items;
-  try { [lines, items] = await Promise.all([listStockableReceiptLines(ctx), listItems(ctx)]); } catch (e) {
+  let lines, items, locations;
+  try { [lines, items, locations] = await Promise.all([listStockableReceiptLines(ctx), listItems(ctx), listLocations(ctx)]); } catch (e) {
     if (e instanceof ForbiddenError) return <p>Dafür fehlt Ihnen die Berechtigung.</p>;
     throw e;
   }
@@ -41,9 +41,15 @@ export default async function ReceiptsToStock({ searchParams }: { searchParams: 
               <tr key={l.id}>
                 <td className="py-2">{l.receivedOn.toISOString().slice(0, 10)}</td><td>{l.orderNumber}</td><td>{l.description}{l.quantity.lt(0) ? " (Gegenbuchung)" : ""}</td><td className="text-right">{l.quantity.toString()}</td>
                 <td>
-                  <form action={stock} className="flex items-center gap-2"><input type="hidden" name="lineId" value={l.id} />
-                    {l.quantity.lt(0) ? <span className="text-muted">Artikel der ursprünglichen Position</span> : (
-                      <select name="itemId" required aria-label="Artikel wählen" className="rounded-md border border-line bg-bg px-2 py-0.5"><option value="">Artikel wählen …</option>{active.map((i) => <option key={i.id} value={i.id}>{i.number} {i.name}</option>)}</select>
+                  <form action={stock} className="flex flex-wrap items-center gap-2"><input type="hidden" name="lineId" value={l.id} />
+                    {l.quantity.lt(0) ? <span className="text-muted">Artikel, Lagerort und Charge der ursprünglichen Position</span> : (
+                      <>
+                        <select name="itemId" required aria-label="Artikel wählen" className="rounded-md border border-line bg-bg px-2 py-0.5"><option value="">Artikel wählen …</option>{active.map((i) => <option key={i.id} value={i.id}>{i.number} {i.name}{i.tracking === "BATCH" ? " (Charge)" : i.tracking === "SERIAL" ? " (Seriennr.)" : ""}</option>)}</select>
+                        <select name="locationId" aria-label="Lagerort" className="rounded-md border border-line bg-bg px-2 py-0.5"><option value="">Ohne Lagerort</option>{locations.filter((x) => x.active).map((x) => <option key={x.id} value={x.id}>{x.code} {x.name}</option>)}</select>
+                        <input name="batchNumber" placeholder="Charge" aria-label="Charge" maxLength={40} className="w-24 rounded-md border border-line bg-bg px-2 py-0.5" />
+                        <input name="expiresOn" type="date" aria-label="Ablaufdatum der Charge" className="rounded-md border border-line bg-bg px-2 py-0.5" />
+                        <input name="serials" placeholder="Seriennummern (Komma/Zeile)" aria-label="Seriennummern" className="w-48 rounded-md border border-line bg-bg px-2 py-0.5" />
+                      </>
                     )}
                     <button className="rounded-md border border-line px-2 py-0.5">Einbuchen</button></form>
                 </td>

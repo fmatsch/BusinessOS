@@ -64,8 +64,8 @@ test.describe.serial("Lager (Browser)", () => {
     await page.getByRole("link", { name: "Wareneingänge einbuchen" }).click();
     const row = page.getByRole("row").filter({ hasText: desc });
     await expect(row).toContainText("3");
-    const value = await row.locator("select option").filter({ hasText: itemNo }).getAttribute("value");
-    await row.locator("select").selectOption(value as string);
+    const value = await row.locator("select[name=itemId] option").filter({ hasText: itemNo }).getAttribute("value");
+    await row.locator("select[name=itemId]").selectOption(value as string);
     await row.getByRole("button", { name: "Einbuchen" }).click();
     await expect(page.getByRole("row").filter({ hasText: desc })).toHaveCount(0); // nur einmal
 
@@ -88,6 +88,10 @@ test.describe.serial("Lager (Browser)", () => {
     await inv.getByLabel("Grund").fill("Inventur: eine Palette gefunden");
     await inv.getByRole("button", { name: "Korrektur buchen" }).click();
     await expect(page.getByText(/Bestand 2 Stk/)).toBeVisible();
+    await page.goto("/inventory/locations");
+    await expect(page.getByRole("heading", { name: "Lagerorte" })).toBeVisible();
+    await page.goto("/inventory/valuation");
+    await expect(page.getByRole("heading", { name: "Lagerbewertung" })).toBeVisible();
     await logout(page);
   });
 

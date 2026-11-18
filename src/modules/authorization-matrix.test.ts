@@ -11,7 +11,7 @@ import { createAsset, disposeAsset, listAssets, runDepreciation } from "./gl/ass
 import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, vatReturn, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
 import { exportReportCsv, listReports, runReport } from "./analytics/service";
 import { listWorkflowRuns, listWorkflows, publishWorkflow, setWorkflowEnabled, workflowHistory } from "./workflows/service";
-import { adjustStock, createItem, getItem, issueStock, listItems, listStockableReceiptLines, reverseMovement, stockReceiptLine, updateItem } from "./inventory/service";
+import { adjustStock, createItem, createLocation, getItem, issueStock, itemValuation, listItems, listLocations, listStockableReceiptLines, reverseMovement, setLocationActive, stockReceiptLine, transferStock, updateItem, valuationReport } from "./inventory/service";
 import { addExpenseLine, cancelExpenseReport, createExpenseReport, decideExpenseReport, getExpenseReceipt, getExpenseReport, listExpenseReports, listPendingExpenseApprovals, markExpensePaid, removeExpenseLine, setMileageRate, submitExpenseReport } from "./expenses/service";
 import { acceptExactSuggestions, candidatesForLine, ignoreBankLine, importBankStatement, listBankLines, matchBankLine, reopenBankLine, unmatchBankLine } from "./finance/bank-service";
 import { billProject, bookProjectTime, createProject, getProject, listProjects, reverseProjectTime, setProjectStatus } from "./projects/service";
@@ -160,6 +160,12 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["issueStock", "inventory.move", () => issueStock(none, { itemId: "x", quantity: "1" })],
   ["adjustStock", "inventory.move", () => adjustStock(none, { itemId: "x", counted: "1", reason: "grund" })],
   ["reverseMovement", "inventory.move", () => reverseMovement(none, "x", "grund")],
+  ["createLocation", "inventory.manage", () => createLocation(none, { code: "L1", name: "x" })],
+  ["listLocations", "inventory.read", () => listLocations(none)],
+  ["setLocationActive", "inventory.manage", () => setLocationActive(none, "x", false)],
+  ["transferStock", "inventory.move", () => transferStock(none, { itemId: "x", quantity: "1", fromLocationId: "a", toLocationId: "b" })],
+  ["valuationReport", "inventory.value.read", () => valuationReport(none)],
+  ["itemValuation", "inventory.value.read", () => itemValuation(none, "x")],
   ["createExpenseReport", "expense.submit", () => createExpenseReport(none, { title: "x" })],
   ["addExpenseLine", "expense.submit", () => addExpenseLine(none, {})],
   ["removeExpenseLine", "expense.submit", () => removeExpenseLine(none, "x")],

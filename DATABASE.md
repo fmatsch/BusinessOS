@@ -93,6 +93,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Hauptbuch**
 `GlSettings` (Startdatum, Bankkonto), `AccountingPeriod`, `JournalEntry` (Nummer, Quelle, `sourceId` eindeutig je Quelle, `reversesId`) und `JournalLine` (Soll/Haben, Kostenstelle, Steuerkennzeichen, Steuerrolle). Append-only per Trigger; Soll = Haben je Satz per Constraint-Trigger; `Account.kind`, `TaxCode.vatAccountId/uvaBaseCode/uvaTaxCode`.
 
+**Lager (Erweiterung)**
+`StockLocation` (Lagerorte), `StockBatch` (Chargen mit Ablaufdatum); `StockMovement` trägt zusätzlich Lagerort, Charge, Seriennummer (Menge dann ±1, per CHECK), Einstandspreis und eine Umbuchungskennung. Bestand und Bewertung werden aus dem Journal berechnet, nicht gespeichert.
+
 **Lohnabrechnung**
 `PayrollParamSet` (versionierte Sätze/Tarif, Inhalt unveränderlich, einmalige Prüfung), `PayrollTerms` (Vertragsdaten, append-only), `PayrollRun` (Status DRAFT/APPROVED/CANCELLED, je Monat ein nicht stornierter Lauf, freigegebene Läufe per Trigger gesperrt) und `PayrollRunLine` (Ergebnis je Mitarbeiter mit Aufschlüsselung).
 

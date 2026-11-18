@@ -11,7 +11,7 @@ const BACK = "/inventory";
 async function create(fd: FormData) {
   "use server";
   const ctx = await requireContext();
-  await runAction(BACK, () => createItem(ctx, { number: fd.get("number"), name: fd.get("name"), unit: fd.get("unit") || "Stk", reorderLevel: String(fd.get("reorderLevel") ?? "").replace(",", ".") }));
+  await runAction(BACK, () => createItem(ctx, { number: fd.get("number"), name: fd.get("name"), unit: fd.get("unit") || "Stk", tracking: fd.get("tracking") || "NONE", valuationMethod: fd.get("valuationMethod") || "AVG", reorderLevel: String(fd.get("reorderLevel") ?? "").replace(",", ".") }));
   revalidatePath(BACK);
 }
 
@@ -30,11 +30,15 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     <div className="max-w-5xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Lager</h1>
-        <p className="text-sm text-muted">Artikel und Bestände aus einem Journal: Wareneingänge aus der Beschaffung einbuchen, Entnahmen und Inventurkorrekturen buchen. Ein Lager je Organisation, ohne Lagerorte, Chargen und Bewertung.</p>
+        <p className="text-sm text-muted">Artikel und Bestände aus einem Journal: Wareneingänge aus der Beschaffung einbuchen, Entnahmen und Inventurkorrekturen buchen. Mit Lagerorten, Chargen, Seriennummern und Bewertung (gleitender Durchschnitt oder FIFO). Die Bewertung bucht nichts ins Hauptbuch.</p>
       </div>
       <ErrorBanner message={error} />
       {below > 0 && <p role="status" className="text-sm font-medium">{below} Artikel am oder unter dem Mindestbestand.</p>}
-      {can(ctx, "inventory.move") && <p className="text-sm"><Link className="text-accent underline" href="/inventory/receipts">Wareneingänge einbuchen</Link></p>}
+      <p className="flex flex-wrap gap-4 text-sm">
+        {can(ctx, "inventory.move") && <Link className="text-accent underline" href="/inventory/receipts">Wareneingänge einbuchen</Link>}
+        <Link className="text-accent underline" href="/inventory/locations">Lagerorte</Link>
+        {can(ctx, "inventory.value.read") && <Link className="text-accent underline" href="/inventory/valuation">Bewertung</Link>}
+      </p>
       {can(ctx, "inventory.manage") && (
         <form action={create} className="grid gap-3 rounded-xl border border-line bg-surface p-4 text-sm sm:grid-cols-5">
           <h2 className="font-medium sm:col-span-5">Artikel anlegen</h2>
@@ -42,6 +46,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           <label className="sm:col-span-2">Bezeichnung<input name="name" required maxLength={120} className={input} /></label>
           <label>Einheit<input name="unit" defaultValue="Stk" maxLength={10} className={input} /></label>
           <label>Mindestbestand<input name="reorderLevel" inputMode="decimal" className={input} /></label>
+          <label>Verfolgung<select name="tracking" className={input}><option value="NONE">keine</option><option value="BATCH">Chargen</option><option value="SERIAL">Seriennummern</option></select></label>
+          <label>Bewertung<select name="valuationMethod" className={input}><option value="AVG">gleitender Durchschnitt</option><option value="FIFO">FIFO</option></select></label>
           <div className="sm:col-span-5"><button className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-fg">Anlegen</button></div>
         </form>
       )}

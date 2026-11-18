@@ -28,12 +28,13 @@ export async function receiptLinesForStock(tx: Prisma.TransactionClient, organiz
   });
   const lineIds = [...new Set(lines.map((l) => l.requestLineId))];
   const [requestLines, originals] = await Promise.all([
-    tx.purchaseRequestLine.findMany({ where: { id: { in: lineIds } }, select: { id: true, description: true } }),
+    tx.purchaseRequestLine.findMany({ where: { id: { in: lineIds } }, select: { id: true, description: true, unitPrice: true } }),
     tx.goodsReceiptLine.findMany({ where: { receiptId: { in: lines.map((l) => l.receipt.reversesId).filter((x): x is string => !!x) }, requestLineId: { in: lineIds } }, select: { id: true, receiptId: true, requestLineId: true } }),
   ]);
   const desc = new Map(requestLines.map((r) => [r.id, r.description]));
+  const price = new Map(requestLines.map((r) => [r.id, new Decimal(r.unitPrice.toString())]));
   return lines.map((l) => ({
-    id: l.id, quantity: new Decimal(l.quantity.toString()), receivedOn: l.receipt.receivedOn, orderNumber: l.receipt.order.number, description: desc.get(l.requestLineId) ?? "–",
+    id: l.id, quantity: new Decimal(l.quantity.toString()), receivedOn: l.receipt.receivedOn, orderNumber: l.receipt.order.number, description: desc.get(l.requestLineId) ?? "–", unitPrice: price.get(l.requestLineId) ?? null,
     reversesLineId: l.receipt.reversesId ? originals.find((o) => o.receiptId === l.receipt.reversesId && o.requestLineId === l.requestLineId)?.id ?? null : null,
   }));
 }
