@@ -29,20 +29,23 @@
 </head>
 <body>
 <main>
-  <span class="badge">Frühe Entwicklung · Foundation-Phase</span>
+  <span class="badge">Alpha · Beschaffung, Budget und lesender KI-Copilot funktionieren</span>
   <h1>BusinessOS</h1>
   <p class="lead">Das Betriebssystem für Unternehmen: eine modulare, KI-native ERP-Plattform mit einer gemeinsamen Datenbasis, Mandantentrennung und lückenlosem Audit.</p>
   <a class="btn" href="https://github.com/fmatsch/BusinessOS">Quellcode auf GitHub</a>
 
   <h2>Module</h2>
   <div class="grid">
-    <div class="card"><h3>Organisationen &amp; Rechte <span class="tag live">Foundation</span></h3><p>Mehrere Firmen pro Benutzer, Rollen und Berechtigungen, serverseitig geprüft.</p></div>
-    <div class="card"><h3>Beschaffung <span class="tag">geplant</span></h3><p>Bestellanforderung, Genehmigung, Bestellung, Budget-Bindung.</p></div>
-    <div class="card"><h3>Finanzen <span class="tag">geplant</span></h3><p>Doppelte Buchführung, unveränderliche Buchungen, Storno.</p></div>
-    <div class="card"><h3>Personal <span class="tag">geplant</span></h3><p>Verzeichnis, Abwesenheiten, getrennte Zugriffsrechte.</p></div>
-    <div class="card"><h3>Lager &amp; Projekte <span class="tag">geplant</span></h3><p>Nachvollziehbare Bestandsbewegungen, Projektbudgets.</p></div>
-    <div class="card"><h3>KI-Copilot <span class="tag">geplant</span></h3><p>Fragen an die eigenen Daten – über berechtigungsgeprüfte Werkzeuge, mit Quellenangabe.</p></div>
+    <div class="card"><h3>Organisationen &amp; Rechte <span class="tag live">funktioniert</span></h3><p>Mehrere Firmen pro Benutzer, Organisationswechsel, Rollen und Berechtigungen – serverseitig geprüft.</p></div>
+    <div class="card"><h3>Beschaffung <span class="tag live">funktioniert</span></h3><p>Anforderung, Freigabe (über 5.000 € zusätzlich Finanzen), Bestellung mit Kostenstelle, Lieferanten.</p></div>
+    <div class="card"><h3>Budgets <span class="tag live">funktioniert</span></h3><p>Budget je Kostenstelle und Jahr; gebunden wird aus den Bestellungen berechnet, Überschreitungen werden angezeigt.</p></div>
+    <div class="card"><h3>Audit-Log <span class="tag live">funktioniert</span></h3><p>Jede Änderung wird in derselben Transaktion protokolliert, auch jede KI-Aktion.</p></div>
+    <div class="card"><h3>KI-Copilot <span class="tag live">lesend</span></h3><p>Fragen an die eigenen Daten über berechtigungsgeprüfte Werkzeuge, mit Quellenangabe. Noch nicht gegen die Live-API geprüft.</p></div>
+    <div class="card"><h3>Finanzen · Personal · Lager · Projekte · CRM · Workflows <span class="tag">geplant</span></h3><p>Noch nicht umgesetzt und in der Anwendung klar als geplant gekennzeichnet.</p></div>
   </div>
+
+  <h2>Qualität</h2>
+  <p>66 Unit- und Integrationstests gegen PostgreSQL, 13 Browser-Tests über vier Rollen, Mandantentrennung, Autorisierungsmatrix, Finanzkonsistenz und eine automatische Barrierefreiheitsprüfung (WCAG A/AA) laufen in der CI. Nicht abgedeckt: manuelle Barrierefreiheits-, Last- und Penetrationstests.</p>
 
   <h2>Prinzipien</h2>
   <p>Eine Quelle der Wahrheit · API-first · Strikte Mandantentrennung · Jede Änderung im Audit-Log · KI ist Schnittstelle, nicht Ersatz für Geschäftslogik · Deutsch und Englisch.</p>
