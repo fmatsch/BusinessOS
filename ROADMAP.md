@@ -178,9 +178,14 @@ Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).
 * ✅ Berechtigungen: `workflow.manage` (Inhaber), `workflow.read` (Finanzen, Inhaber)
 * ⚠️ Workflows können nur in der Anwendung benachrichtigen: keine Datenänderungen, keine Webhooks/E-Mails, keine Verzweigungen oder Wartezeiten; ältere Ereignisse (Beschaffung, Personal, Dienstplan, Zeit) tragen nur Kennungen und lassen sich nicht filtern; Ereignisse werden vom Worker verarbeitet (`npm run worker` muss laufen)
 
+## Analysen
+* ✅ Acht feste Berichte: Umsatz je Monat, Offene Posten nach Alter, Einkauf nach Lieferant, Budget und Verbrauch je Kostenstelle, Projektstunden, Spesen je Monat, Angebote mit Annahmequote, Lagerbestand – mit Balkendiagramm (SVG mit Textalternative) und gleichwertiger Tabelle
+* ✅ Rechte: `analytics.read` plus das Recht auf die zugrunde liegenden Daten (die Berichtsliste zeigt nur erlaubte Berichte, Aufruf und Export sind nicht erzwingbar); alle Werte exakt (Decimal)
+* ✅ CSV-Export (UTF-8 mit BOM, Semikolon, Dezimalkomma; Textzellen gegen Formelinjektion geschützt; jeder Export im Audit-Log)
+* ⚠️ Feste Berichte, keine frei zusammenstellbaren Abfragen, keine Dashboards je Benutzer, keine Zeitreihen über mehrere Jahre; Personaldaten sind bewusst nicht enthalten
+
 ## Danach
 Detailplan für Workforce (HR-Basis, Dienstplanung, Zeiterfassung, Abrechnung) und weitere Module: [MODULES.md](MODULES.md). Entschieden: Abrechnung = zuerst Lohn-Export.
 
 * ✅ Kundenabrechnung nach Stunden (M11, über Rechnungsentwurf)
-* ⬜ Analysen
 * ⬜ REST-API mit OpenAPI (im Ursprungsauftrag gefordert, noch nicht umgesetzt) · MFA · Row-Level-Security

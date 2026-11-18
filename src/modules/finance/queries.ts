@@ -49,3 +49,17 @@ export async function taxRatesById(tx: Prisma.TransactionClient, organizationId:
   const codes = await tx.taxCode.findMany({ where: { organizationId, id: { in: [...new Set(ids)] } }, select: { id: true, rate: true } });
   return new Map(codes.map((c) => [c.id, c.rate.toString()]));
 }
+
+/** Umsatz (netto) ausgestellter Ausgangsrechnungen je Monat eines Kalenderjahres (Rechnungsdatum), Gutschriften abgezogen. Monate 1–12. */
+export async function revenueByMonth(tx: Prisma.TransactionClient, organizationId: string, year: number): Promise<Decimal[]> {
+  const rows = await tx.$queryRaw<{ m: number; total: Prisma.Decimal }[]>`
+    SELECT EXTRACT(MONTH FROM "invoiceDate")::int AS m,
+           SUM(CASE WHEN "kind" = 'CREDIT' THEN -"netTotal" ELSE "netTotal" END) AS total
+    FROM "CustomerInvoice"
+    WHERE "organizationId" = ${organizationId} AND "status" = 'ISSUED'
+      AND "invoiceDate" >= ${new Date(Date.UTC(year, 0, 1))} AND "invoiceDate" < ${new Date(Date.UTC(year + 1, 0, 1))}
+    GROUP BY 1`;
+  const out = Array.from({ length: 12 }, () => new Decimal(0));
+  for (const r of rows) out[r.m - 1] = new Decimal(r.total.toString());
+  return out;
+}

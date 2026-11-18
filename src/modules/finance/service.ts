@@ -424,6 +424,9 @@ export async function createCustomerInvoiceDraftTx(tx: Tx, ctx: Ctx, raw: unknow
 }
 
 export { renderInvoicePdf, type IssuerDetails } from "./invoice-pdf";
+/** Für andere Module (Analysen): Offene Posten und Altersklassen. */
+export { listOpenItems } from "./receivables";
+export { BUCKET_LABEL } from "./dunning";
 
 /** Wie `createCustomerInvoice`, aber in einer vorhandenen Transaktion (Berechtigung und Eingabeprüfung macht der Aufrufer). */
 export async function createCustomerInvoiceTx(tx: Tx, ctx: Ctx, input: z.infer<typeof customerInvoiceInput>, origin?: { recurringId: string; recurringDate: string }) {

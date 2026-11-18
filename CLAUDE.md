@@ -32,6 +32,7 @@ Modularer Monolith: Next.js (App Router) + TypeScript strict + Prisma/PostgreSQL
 10j. **Spesen**: eingereichte Abrechnungen nie ändern; Freigabe nur über die Regel `EXPENSE_REPORT`; nie die eigene Abrechnung freigeben; Beleg-Zugriff nur über `getExpenseReceipt` (Sichtbarkeitsprüfung).
 10k. **Lager**: Bestand nur als Summe des Journals; Bewegungen nie ändern (Gegenbuchung); Buchungen je Artikel unter Zeilensperre, nie negativer Bestand; Wareneingänge nur über `stockReceiptLine` (jede Position einmal).
 10l. **Workflows**: nur Benachrichtigungen, keine Datenänderungen; Definitionen nie ändern (neue Version); Ereignisse nur über `platform/events/emit.ts` ohne Personendaten in der Nutzlast; Handler idempotent (dedupeKey, `WorkflowRun` eindeutig).
+10m. **Analysen**: Berichte nur über `analytics/service.ts` (Recht auf die Daten zusätzlich zu `analytics.read`); CSV nur über `analytics/csv.ts` (Formelschutz); keine freien Abfragen, keine Personaldaten.
 11. **UI-Texte** über i18n (`de` Standard, `en`). Nicht implementierte Module klar als „geplant" kennzeichnen.
 12. **Keine Behauptung ohne Verifikation**: Features erst als fertig melden, wenn Tests/Typecheck laufen.
 13. Demo-Daten nur synthetisch.

@@ -37,3 +37,15 @@ export async function receiptLinesForStock(tx: Prisma.TransactionClient, organiz
     reversesLineId: l.receipt.reversesId ? originals.find((o) => o.receiptId === l.receipt.reversesId && o.requestLineId === l.requestLineId)?.id ?? null : null,
   }));
 }
+
+/** Bestellvolumen je Lieferant im Kalenderjahr (Bestelldatum, ohne stornierte), absteigend. Ohne Berechtigungsprüfung – Aufrufer autorisieren selbst. */
+export async function orderVolumeBySupplier(tx: Prisma.TransactionClient, organizationId: string, year: number) {
+  const rows = await tx.purchaseOrder.groupBy({
+    by: ["supplierId"], where: { organizationId, status: { not: "CANCELLED" }, createdAt: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } },
+    _sum: { totalAmount: true }, _count: { _all: true },
+  });
+  const suppliers = await tx.supplier.findMany({ where: { organizationId, id: { in: rows.map((r) => r.supplierId) } }, select: { id: true, number: true, name: true } });
+  return rows
+    .map((r) => ({ number: suppliers.find((s) => s.id === r.supplierId)?.number ?? "–", name: suppliers.find((s) => s.id === r.supplierId)?.name ?? "–", total: new Decimal((r._sum.totalAmount ?? 0).toString()), orders: r._count._all }))
+    .sort((a, b) => b.total.comparedTo(a.total));
+}

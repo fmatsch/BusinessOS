@@ -36,6 +36,7 @@
 * Bankauszüge: eigener XML-Leser ohne DTD/Entitäten (keine Entity-Expansion), Größen- und Zeilengrenzen, Berechtigung `finance.bank.manage`; Zahlungsvermerke tragen die Herkunft (`bankLineId`) im Audit-Log.
 * Spesen: Belege werden wie Finanzbelege am Inhalt geprüft und mit Prüfsumme gespeichert; Zugriff nur für die Person, die direkte Führungskraft und `expense.read_all`; fremde Abrechnungen sind für Unbeteiligte nicht erkennbar (404).
 * KI-Schreibvorschläge: nur `propose_*`-Werkzeuge; Ausführung ausschließlich durch die bestätigende Person über den Service mit ihren Rechten (nie Modell, nie Service-Konto); Beschreibung aus geprüften Daten; Frist 15 Minuten, einmalig (Beanspruchung per Statuswechsel), Audit (`ai.proposal` als KI, `ai.proposal_confirmed` als Person). Freigaben, Löschungen, Zahlungen sind nicht als Werkzeug vorhanden.
+* Analysen: feste Berichte hinter doppeltem Rechtecheck, kein freies SQL; CSV-Export mit Formelschutz und Audit-Eintrag; Workflows senden nur Benachrichtigungen (keine Datenänderung, keine externen Aufrufe), Texte werden nie als HTML ausgegeben.
 
 ## Bekannte Lücken (offen)
 * Postgres Row-Level-Security noch nicht aktiv.

@@ -24,7 +24,7 @@ const NAV = [
   { href: "/projects", key: "nav.projects", live: true },
   { href: "/crm", key: "nav.crm", live: true },
   { href: "/workflows", key: "nav.workflows", live: true },
-  { href: "/planned/analytics", key: "nav.analytics" },
+  { href: "/analytics", key: "nav.analytics", live: true },
   { href: "/copilot", key: "nav.copilot", live: true },
   { href: "/audit", key: "nav.audit", live: true },
   { href: "/settings/approvals", key: "nav.approvals", live: true },
