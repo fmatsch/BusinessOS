@@ -1079,6 +1079,90 @@ model JournalLine {
   @@index([entryId])
 }
 
+// ───────── Lohnabrechnung (Österreich, parametrisiert) ─────────
+
+/// Versionierte Parametertabelle (Sätze, Grenzen, Tarif). Unveränderlich; neue Gültigkeit = neue Zeile. Erst nach Prüfung (validatedAt) für die Freigabe zulässig.
+model PayrollParamSet {
+  id             String    @id @default(cuid())
+  organizationId String
+  label          String
+  validFrom      DateTime  @db.Date
+  params         Json
+  source         String
+  validatedById  String?
+  validatedAt    DateTime?
+  createdById    String
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId, validFrom])
+}
+
+/// Vertragsdaten für die Abrechnung (je Mitarbeiter, versioniert über validFrom; neue Zeile statt Änderung).
+model PayrollTerms {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  employeeId          String
+  validFrom           DateTime @db.Date
+  monthlyGross        Decimal  @db.Decimal(19, 2)
+  marginal            Boolean  @default(false)
+  allowanceMonthly    Decimal  @default(0) @db.Decimal(19, 2)
+  commuterMonthly     Decimal  @default(0) @db.Decimal(19, 2)
+  familyBonusChildren Int      @default(0)
+  createdById         String
+  createdAt           DateTime @default(now())
+
+  @@index([organizationId, employeeId, validFrom])
+}
+
+/// Abrechnungslauf je Monat. DRAFT ist neu berechenbar; APPROVED ist gesperrt; Korrektur = Storno (CANCELLED) und neue Version.
+model PayrollRun {
+  id             String    @id @default(cuid())
+  organizationId String
+  year           Int
+  month          Int
+  version        Int
+  /// DRAFT | APPROVED | CANCELLED
+  status         String    @default("DRAFT")
+  paramSetId     String
+  /// Momentaufnahme der verwendeten Parameter
+  paramsSnapshot Json
+  paramsValidated Boolean  @default(false)
+  createdById    String
+  createdAt      DateTime  @default(now())
+  approvedById   String?
+  approvedAt     DateTime?
+  cancelledById  String?
+  cancelledAt    DateTime?
+  cancelReason   String?
+
+  lines PayrollRunLine[]
+
+  @@unique([organizationId, year, month, version])
+}
+
+model PayrollRunLine {
+  id             String     @id @default(cuid())
+  organizationId String
+  runId          String
+  run            PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employeeNumber String
+  employeeName   String
+  /// Eingaben dieses Monats
+  regularExtra   Decimal    @default(0) @db.Decimal(19, 2)
+  special        Decimal    @default(0) @db.Decimal(19, 2)
+  gross          Decimal    @db.Decimal(19, 2)
+  svEmployee     Decimal    @db.Decimal(19, 2)
+  tax            Decimal    @db.Decimal(19, 2)
+  net            Decimal    @db.Decimal(19, 2)
+  employerCost   Decimal    @db.Decimal(19, 2)
+  /// vollständige Rechnung (Aufschlüsselung, Hinweise)
+  detail         Json
+
+  @@unique([runId, employeeId])
+  @@index([organizationId, employeeId])
+}
+
 // ───────── Anlagenbuchhaltung ─────────
 
 /// Anlagegut im Anlagenverzeichnis. Lineare Abschreibung monatsgenau; gebucht wird direkt gegen das Anlagenkonto.

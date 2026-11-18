@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireContext } from "@/platform/tenancy/context";
 import { can } from "@/platform/authz/authorize";
@@ -51,7 +52,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
     <div className="max-w-5xl space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Lohn-Export</h1>
-        <p className="text-sm text-muted">Übergibt erfasste Zeiten und Abwesenheiten freigegebener Monate an die Lohnverrechnung. Es werden keine Löhne, Steuern oder Abgaben berechnet.</p>
+        <p className="text-sm text-muted">Übergibt erfasste Zeiten und Abwesenheiten freigegebener Monate an die Lohnverrechnung. Dieser Export berechnet nichts – die Berechnung (Österreich) finden Sie unter <Link className="text-accent underline" href="/payroll/calc">Lohnabrechnung</Link>.</p>
       </div>
       <ErrorBanner message={error} />
       <MonthNav base="/payroll" year={year} month={month} />

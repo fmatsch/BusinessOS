@@ -6,6 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
+import * as payrun from "./payroll/run";
 import { createAsset, disposeAsset, listAssets, runDepreciation } from "./gl/assets";
 import { accountLedger, activateGl, balanceSheetReport, closePeriod as closeGlPeriod, createManualEntry, getEntry, incomeStatementReport, listEntries, listPeriods, vatReturn, postMissingDocuments, reopenPeriod as reopenGlPeriod, reverseEntry, trialBalance } from "./gl/service";
 import { exportReportCsv, listReports, runReport } from "./analytics/service";
@@ -109,6 +110,21 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
   ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["payroll.listParamSets", "payroll.calc.read", () => payrun.listParamSets(none)],
+  ["payroll.createParamSet", "payroll.params.manage", () => payrun.createParamSet(none, {})],
+  ["payroll.validateParamSet", "payroll.params.manage", () => payrun.validateParamSet(none, "x")],
+  ["payroll.setPayrollTerms", "payroll.calc.manage", () => payrun.setPayrollTerms(none, {})],
+  ["payroll.listPayrollTerms", "payroll.calc.read", () => payrun.listPayrollTerms(none)],
+  ["payroll.createRun", "payroll.calc.manage", () => payrun.createRun(none, {})],
+  ["payroll.recalcRun", "payroll.calc.manage", () => payrun.recalcRun(none, "x", {})],
+  ["payroll.discardRun", "payroll.calc.manage", () => payrun.discardRun(none, "x")],
+  ["payroll.approveRun", "payroll.calc.approve", () => payrun.approveRun(none, "x")],
+  ["payroll.cancelRun", "payroll.calc.approve", () => payrun.cancelRun(none, "x", "Grund")],
+  ["payroll.listRuns", "payroll.calc.read", () => payrun.listRuns(none)],
+  ["payroll.getRun", "payroll.calc.read", () => payrun.getRun(none, "x")],
+  ["payroll.runCsv", "payroll.calc.read", () => payrun.runCsv(none, "x")],
+  ["payroll.myPayslips", "payroll.payslip.own", () => payrun.myPayslips(none)],
+  ["payroll.myPayslip", "payroll.payslip.own", () => payrun.myPayslip(none, "x")],
   ["listAssets", "gl.read", () => listAssets(none)],
   ["createAsset", "gl.post", () => createAsset(none, {})],
   ["runDepreciation", "gl.post", () => runDepreciation(none, 2027, 1)],
@@ -287,7 +303,12 @@ describe("Autorisierungsmatrix: Rollen", () => {
   });
   it("Mitarbeiter dürfen nur anfordern und Stammdaten lesen – nichts schreiben oder freigeben", () => {
     const perms = SYSTEM_ROLES.employee!.permissions;
-    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.time.book", "expense.submit"].includes(p))).toEqual([]);
+    expect(perms.filter((p) => !p.endsWith(".read") && !["procurement.request.create", "hr.absence.request", "roster.swap.request", "time.entry.own", "project.time.book", "expense.submit", "payroll.payslip.own"].includes(p))).toEqual([]);
+  });
+  it("Lohnabrechnung: Berechnen nur Personalwesen und Inhaber, Freigabe nur Inhaber (Vier-Augen)", () => {
+    expect(roles("payroll.calc.manage")).toEqual(["hr", "owner"]);
+    expect(roles("payroll.calc.approve")).toEqual(["owner"]);
+    expect(roles("payroll.params.manage")).toEqual(["hr", "owner"]);
   });
   it("Budgets ändern dürfen nur Finanzen und Inhaber", () => {
     expect(roles("finance.budget.write")).toEqual(["finance", "owner"]);

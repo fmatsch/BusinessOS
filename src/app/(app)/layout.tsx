@@ -17,6 +17,7 @@ const NAV = [
   { href: "/time", key: "nav.time", live: true },
   { href: "/time/team", key: "nav.timeTeam", live: true },
   { href: "/payroll", key: "nav.payroll", live: true },
+  { href: "/payroll/payslips", key: "nav.payslips", live: true },
   { href: "/expenses", key: "nav.expenses", live: true },
   { href: "/procurement", key: "nav.procurement", live: true },
   { href: "/suppliers", key: "nav.suppliers", live: true },

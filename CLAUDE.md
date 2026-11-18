@@ -35,6 +35,7 @@ Modularer Monolith: Next.js (App Router) + TypeScript strict + Prisma/PostgreSQL
 10m. **Analysen**: Berichte nur über `analytics/service.ts` (Recht auf die Daten zusätzlich zu `analytics.read`); CSV nur über `analytics/csv.ts` (Formelschutz); keine freien Abfragen, keine Personaldaten.
 10n. **Installer**: alles, was in Skripte/Dateien einfließt, vorher per Allowlist prüfen (`installer/lib/validate.mjs`); Server-Skript statisch halten (Werte nur über `params`); Passwörter nie in Befehlszeilen oder Protokolle; Archiv ohne `.env`.
 10o. **Hauptbuch**: gebucht wird nur über `gl/service.ts` (`writeEntry`: Prüfung, offene Periode, Nummer); Sätze nie ändern (Storno); Belegbuchungen in derselben Transaktion wie die Ausstellung/Freigabe/Zahlung; Buchungsregeln nur in `gl/rules.ts` (rein, getestet).
+10p. **Lohnabrechnung**: Berechnung nur über `payroll/calc.ts` (rein, getestet); gesetzliche Werte nie im Code-Pfad, sondern aus `PayrollParamSet`; Freigabe nur mit geprüftem Parametersatz und durch eine andere Person als die erstellende; freigegebene Läufe nie ändern (Storno + neue Version); Gehälter nie ins Audit-Log, Lesezugriffe protokollieren; Mitarbeiter sehen nur die eigene freigegebene Zeile.
 11. **UI-Texte** über i18n (`de` Standard, `en`). Nicht implementierte Module klar als „geplant" kennzeichnen.
 12. **Keine Behauptung ohne Verifikation**: Features erst als fertig melden, wenn Tests/Typecheck laufen.
 13. Demo-Daten nur synthetisch.
