@@ -1,5 +1,7 @@
 /* Hintergrund-Worker: verarbeitet die Outbox in Intervallen. Start: npm run worker */
+import { PrismaClient } from "@prisma/client";
 import { runOutbox } from "../src/modules/events";
+import { syncSystemRoles } from "../src/platform/authz/sync-roles";
 
 const intervalMs = Number(process.env.WORKER_INTERVAL_MS ?? 5000);
 let stopping = false;
@@ -8,6 +10,9 @@ process.on("SIGTERM", () => { stopping = true; });
 
 async function main() {
   console.log(`Worker gestartet (Intervall ${intervalMs} ms)`);
+  // neue Berechtigungen der Systemrollen bei jedem Start in bestehende Organisationen übernehmen (rein ergänzend)
+  const db = new PrismaClient();
+  try { console.log("Rollen-Sync:", await syncSystemRoles(db)); } finally { await db.$disconnect(); }
   while (!stopping) {
     const r = await runOutbox();
     if (r.processed || r.retried || r.dead) console.log(new Date().toISOString(), r);

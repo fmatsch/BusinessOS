@@ -8,7 +8,7 @@ import { ConflictError, NotFoundError } from "@/platform/errors";
 import { dateFromIso, isoFromDate, addDays } from "@/modules/hr/queries";
 import { receivingOf } from "@/modules/procurement/queries";
 import { allocateTax } from "./tax";
-import { matchInvoice } from "./match";
+import { DEFAULT_TOLERANCE, matchInvoice } from "./match";
 import { renderInvoicePdf, type IssuerDetails } from "./invoice-pdf";
 import { sha256Hex } from "./formats/encoding";
 import {
@@ -145,7 +145,7 @@ export async function setCustomerAccounts(ctx: Ctx, customerId: string, raw: unk
   });
 }
 
-export const DEFAULT_ACCOUNTING_PROFILE = { format: "BMD", advisorNumber: null, clientNumber: null, accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", dictationCode: "", includeFiles: true } as const;
+export const DEFAULT_ACCOUNTING_PROFILE = { format: "BMD", advisorNumber: null, clientNumber: null, accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", dictationCode: "", includeFiles: true, matchTolerancePercent: "2", matchToleranceAmount: "5" } as const;
 
 export async function getAccountingProfile(ctx: Ctx, tx: Tx | typeof db = db) {
   if (tx === db) authorize(ctx, "finance.export.read");
@@ -277,7 +277,9 @@ async function computeMatch(tx: Tx, organizationId: string, inv: { id: string; k
   const invoiceIds = approved.filter((a) => a.kind === "INVOICE").map((a) => a.id);
   const credits = await tx.supplierInvoice.findMany({ where: { organizationId, status: "APPROVED", kind: "CREDIT", creditsId: { in: invoiceIds } }, select: { netTotal: true } });
   const already = approved.filter((a) => a.kind === "INVOICE").reduce((a, x) => a.plus(x.netTotal.toString()), d(0)).minus(credits.reduce((a, x) => a.plus(x.netTotal.toString()), d(0)));
-  const result = matchInvoice({ orderedNet: rec.orderedNet, receivedNet: rec.receivedNet, alreadyInvoicedNet: already, invoiceNet: inv.netTotal.toString() });
+  const prof = await tx.accountingProfile.findUnique({ where: { organizationId }, select: { matchTolerancePercent: true, matchToleranceAmount: true } });
+  const tolerance = prof ? { percent: prof.matchTolerancePercent.toString(), amount: prof.matchToleranceAmount.toString() } : DEFAULT_TOLERANCE;
+  const result = matchInvoice({ orderedNet: rec.orderedNet, receivedNet: rec.receivedNet, alreadyInvoicedNet: already, invoiceNet: inv.netTotal.toString() }, tolerance);
   return { applicable: true as const, ...result, orderedNet: rec.orderedNet, receivedNet: rec.receivedNet, alreadyInvoicedNet: already, deliveryStatus: rec.status, orderNumber: rec.order.number };
 }
 

@@ -12,9 +12,9 @@ Status: **umgesetzt** (Schritte 1–4 des ursprünglichen Plans); Schritt 5 (Bud
 * `GoodsReceipt`/`GoodsReceiptLine`: append-only (DB-Trigger); Korrektur nur als Gegenbuchung (`reversesId`, höchstens einmal je Wareneingang). Mengen beziehen sich auf die Positionen der Bestellanforderung (Bestellungen haben keine eigenen Positionen).
 * Kein Abgleich je Rechnungsposition: Rechnungspositionen tragen keine Menge, daher wird der **Wert** (Menge × Bestellpreis) verglichen.
 * Überlieferung ist nicht möglich (Menge ≤ offene Bestellmenge); parallele Buchungen sind per Zeilensperre auf der Bestellung abgesichert. Ebenso sperrt die Rechnungsfreigabe die Bestellung, damit parallele Freigaben den Abgleich nicht umgehen.
-* Berechtigungen: `procurement.receipt.create`/`.read` (Führungskraft, Finanzen, Inhaber), `finance.invoice.in.accept_variance` (Finanzen, Inhaber). **Bestehende Organisationen** brauchen die neuen Berechtigungen in ihren Rollen (`npx prisma db seed` für die Demo; produktiv per Rollen-Sync).
+* Berechtigungen: `procurement.receipt.create`/`.read` (Führungskraft, Finanzen, Inhaber), `finance.invoice.in.accept_variance` (Finanzen, Inhaber). Bestehende Organisationen erhalten neue Berechtigungen per `npm run db:sync-roles` (läuft auch beim Start des Workers; rein ergänzend).
 
 ## Grenzen
-* Toleranz ist noch nicht je Organisation oder Lieferant einstellbar; der Abgleich ist Pflicht (nur mit Bestellbezug).
+* Toleranz ist je Organisation einstellbar (Finanzen → Einstellungen), nicht je Lieferant; der Abgleich ist Pflicht (nur mit Bestellbezug).
 * Eine Korrektur des Wareneingangs nach einer bereits freigegebenen Rechnung ändert diese nicht; der Stand wird beim nächsten Abgleich zur Bestellung berücksichtigt.
 * Kein Wareneingang für Bestellungen ohne Anforderungspositionen, keine Lieferscheine/Seriennummern, keine Lagerführung.

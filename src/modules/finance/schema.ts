@@ -47,6 +47,8 @@ export const profileInput = z.object({
   symbolOut: z.string().trim().regex(/^[A-Z0-9]{1,3}$/, "Buchungssymbol: 1–3 Zeichen A–Z, 0–9"),
   dictationCode: z.string().trim().max(2).default(""),
   includeFiles: z.coerce.boolean(),
+  matchTolerancePercent: decimalString.refine((d) => d.gte(0) && d.lte(100) && d.decimalPlaces() <= 2, "Toleranz in Prozent: 0–100, höchstens 2 Nachkommastellen").default("2" as never),
+  matchToleranceAmount: decimalString.refine((d) => d.gte(0) && d.lte(100000) && d.decimalPlaces() <= 2, "Toleranzbetrag: 0–100.000, höchstens 2 Nachkommastellen").default("5" as never),
 });
 
 /** IBAN-Prüfsumme (ISO 13616, Modulo 97). */

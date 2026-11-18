@@ -1055,6 +1055,9 @@ model AccountingProfile {
   /// DATEV: Diktatkürzel
   dictationCode        String  @default("")
   includeFiles         Boolean @default(true)
+  /// Toleranz beim Rechnungsabgleich: die größere von Prozent der Rechnungssumme und Betrag
+  matchTolerancePercent Decimal @default(2) @db.Decimal(5, 2)
+  matchToleranceAmount  Decimal @default(5) @db.Decimal(19, 2)
 }
 
 /// Aussteller der Ausgangsrechnungen (Briefkopf und Bankverbindung). Beim Ausstellen wird eine Kopie am Beleg gespeichert.

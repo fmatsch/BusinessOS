@@ -6,7 +6,7 @@ import { PERMISSIONS, SYSTEM_ROLES, type Permission } from "@/platform/authz/per
 import { ConflictError, NotFoundError } from "@/platform/errors";
 import { createCostCenter } from "@/modules/masterdata/service";
 import { budgetOverview } from "@/modules/budget/service";
-import { acceptInvoiceVariance, approveSupplierInvoice, createAccount, createSupplierInvoice, createTaxCode, getInvoiceMatch, listAccounts, setSupplierAccounts } from "@/modules/finance/service";
+import { acceptInvoiceVariance, approveSupplierInvoice, createAccount, createSupplierInvoice, createTaxCode, getAccountingProfile, getInvoiceMatch, listAccounts, setAccountingProfile, setSupplierAccounts } from "@/modules/finance/service";
 import { createOrder, createRequest, createSupplier, decideRequest, getOrderReceiving, recordReceipt, reverseReceipt } from "./service";
 
 const hasDb = !!process.env.DATABASE_URL;
@@ -68,7 +68,7 @@ describe.skipIf(!hasDb)("Wareneingang und Rechnungsabgleich", () => {
       await tx.$executeRaw`SELECT set_config('app.allow_journal_delete', 'on', true)`;
       await tx.goodsReceiptLine.deleteMany({ where: { receipt: { organizationId: { in: orgs } } } });
       await tx.goodsReceipt.deleteMany({ where: { organizationId: { in: orgs } } });
-      for (const m of ["outboxEvent", "auditLog", "supplierInvoice", "purchaseOrder", "purchaseRequest", "taxCode", "account", "sequence", "supplier", "costCenter"] as const)
+      for (const m of ["outboxEvent", "auditLog", "supplierInvoice", "purchaseOrder", "purchaseRequest", "accountingProfile", "taxCode", "account", "sequence", "supplier", "costCenter"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.user.deleteMany({ where: { id: { in: userIds } } });
@@ -84,6 +84,20 @@ describe.skipIf(!hasDb)("Wareneingang und Rechnungsabgleich", () => {
     const m = await getInvoiceMatch(c.fin!, inv.id);
     expect(m.applicable && m.status).toBe("VARIANCE");
     await expect(approveSupplierInvoice(c.fin2!, inv.id)).rejects.toThrow(/Abgleich mit Bestellung/);
+    await db.supplierInvoice.update({ where: { id: inv.id }, data: { status: "CANCELLED" } });
+  });
+
+  it("Toleranz ist je Organisation einstellbar und wirkt auf den Abgleich", async () => {
+    const base = { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true };
+    expect((await getAccountingProfile(c.fin!)).matchTolerancePercent.toString()).toBe("2"); // Voreinstellung
+    await expect(setAccountingProfile(c.emp!, { ...base, matchTolerancePercent: "10", matchToleranceAmount: "5" })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(setAccountingProfile(c.fin!, { ...base, matchTolerancePercent: "101", matchToleranceAmount: "5" })).rejects.toThrow();
+    const inv = await invoice("RC-TOL", "1000");
+    expect((await getInvoiceMatch(c.fin!, inv.id) as { status: string }).status).toBe("VARIANCE"); // nichts geliefert
+    await setAccountingProfile(c.fin!, { ...base, matchTolerancePercent: "0", matchToleranceAmount: "1500" });
+    expect((await getInvoiceMatch(c.fin!, inv.id) as { status: string }).status).toBe("OK"); // 1.500 € Spielraum
+    await setAccountingProfile(c.fin!, { ...base, matchTolerancePercent: "2", matchToleranceAmount: "5" });
+    expect((await getInvoiceMatch(c.fin!, inv.id) as { status: string }).status).toBe("VARIANCE");
     await db.supplierInvoice.update({ where: { id: inv.id }, data: { status: "CANCELLED" } });
   });
 

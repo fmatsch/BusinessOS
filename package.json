@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:sync-roles": "tsx scripts/sync-roles.ts",
     "db:dev": "node scripts/dev-db.mjs",
     "worker": "tsx scripts/worker.ts"
   },

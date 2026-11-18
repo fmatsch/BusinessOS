@@ -23,7 +23,7 @@ async function saveProfile(fd: FormData) {
   const ctx = await requireContext();
   await runAction(BACK, () => setAccountingProfile(ctx, {
     format: fd.get("format"), advisorNumber: fd.get("advisorNumber"), clientNumber: fd.get("clientNumber"), accountLength: fd.get("accountLength"), fiscalYearStartMonth: fd.get("fiscalYearStartMonth"),
-    symbolIn: String(fd.get("symbolIn") ?? "").toUpperCase(), symbolOut: String(fd.get("symbolOut") ?? "").toUpperCase(), dictationCode: fd.get("dictationCode") ?? "", includeFiles: fd.get("includeFiles") === "on",
+    symbolIn: String(fd.get("symbolIn") ?? "").toUpperCase(), symbolOut: String(fd.get("symbolOut") ?? "").toUpperCase(), dictationCode: fd.get("dictationCode") ?? "", includeFiles: fd.get("includeFiles") === "on", matchTolerancePercent: fd.get("matchTolerancePercent") || "2", matchToleranceAmount: fd.get("matchToleranceAmount") || "5",
   }));
   revalidatePath(BACK);
 }
@@ -101,6 +101,9 @@ export default async function FinanceSettings({ searchParams }: { searchParams: 
               <label>Wirtschaftsjahr beginnt im Monat<input name="fiscalYearStartMonth" type="number" min={1} max={12} defaultValue={profile.fiscalYearStartMonth} className={input} /></label>
               <label>BMD: Symbol Eingang<input name="symbolIn" defaultValue={profile.symbolIn} maxLength={3} className={input} /></label>
               <label>BMD: Symbol Ausgang<input name="symbolOut" defaultValue={profile.symbolOut} maxLength={3} className={input} /></label>
+              <label>Abgleich-Toleranz (% der Rechnung)<input name="matchTolerancePercent" inputMode="decimal" defaultValue={profile.matchTolerancePercent.toString()} className={input} /></label>
+              <label>oder mindestens (Betrag)<input name="matchToleranceAmount" inputMode="decimal" defaultValue={profile.matchToleranceAmount.toString()} className={input} /></label>
+              <p className="text-xs text-muted sm:col-span-2">Beim Freigeben einer Rechnung mit Bestellbezug gilt die größere der beiden Toleranzen.</p>
               <label className="flex items-center gap-2 sm:col-span-4"><input type="checkbox" name="includeFiles" defaultChecked={profile.includeFiles} /> Belegdateien als Paket (ZIP) mitliefern</label>
               <div className="sm:col-span-4"><button className={primary}>Profil speichern</button></div>
             </form>
