@@ -59,7 +59,7 @@ export default async function CustomerInvoicePage({ params, searchParams }: { pa
             <button className={secondary}>Als bezahlt markieren</button></form>
         )}
       </div>
-      {inv.status === "ISSUED" && <p className="text-xs text-muted">Ausgestellte Rechnungen sind unveränderlich; Korrekturen erfolgen per Gutschrift. Das PDF enthält nur die Daten dieses Belegs; Anschrift, UID und Bankverbindung des Ausstellers sind noch nicht hinterlegt.</p>}
+      {inv.status === "ISSUED" && <p className="text-xs text-muted">Ausgestellte Rechnungen sind unveränderlich; Korrekturen erfolgen per Gutschrift. Anschrift, UID und Bankverbindung im PDF kommen aus „Finanzen → Einstellungen → Aussteller“ (Stand beim Ausstellen).</p>}
     </div>
   );
 }

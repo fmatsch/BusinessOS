@@ -77,3 +77,20 @@ describe("Rechnungs-PDF", () => {
     expect(hard.join("")).toBe("Donaudampfschifffahrtsgesellschaftskapitän");
   });
 });
+
+describe("Rechnungs-PDF mit Aussteller-Angaben", () => {
+  const issuerDetails = { legalName: "Muster GmbH", street: "Ringstraße 5", zip: "1010", city: "Wien", country: "AT", uid: "ATU11111111", companyRegister: "FN 123456a, Handelsgericht Wien", iban: "AT611904300234573201", bic: "BKAUATWW", bankName: "Bank Austria", email: "office@muster.example", phone: "+43 1 234" };
+  it("zeigt Anschrift im Kopf und Bank/Firmenbuch/Kontakt in der Fußzeile", () => {
+    const s = text(renderInvoicePdf({ ...base, issuerDetails }));
+    expect(s).toContain("(Ringstra\xdfe 5)");
+    expect(s).toContain("(UID: ATU11111111)");
+    expect(s).toContain("(Bank Austria \xb7 IBAN AT61 1904 3002 3457 3201 \xb7 BIC BKAUATWW)");
+    expect(s).toContain("(FN 123456a, Handelsgericht Wien)");
+    expect(s).toContain("(office@muster.example \xb7 +43 1 234)");
+  });
+  it("ohne Angaben bleibt es beim Namen", () => {
+    const s = text(renderInvoicePdf(base));
+    expect(s).not.toContain("IBAN");
+    expect(s).not.toContain("ATU11111111");
+  });
+});

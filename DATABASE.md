@@ -60,6 +60,9 @@ Quelle der Wahrheit: [`prisma/schema.prisma`](prisma/schema.prisma). Dieses Doku
 **Wareneingang**
 `GoodsReceipt` (je Bestellung, `reversesId` für Gegenbuchungen, eindeutig) und `GoodsReceiptLine` (Bestellposition, Menge; Gegenbuchung negativ) – per Trigger append-only. `SupplierInvoice` um `varianceAcceptedById/At/Reason` erweitert.
 
+**Aussteller**
+`IssuerProfile` (je Organisation: Firmenname, Anschrift, UID, Firmenbuch, IBAN/BIC, Kontakt). `CustomerInvoice.issuerSnapshot` (JSON) hält den Stand beim Ausstellen fest.
+
 **Weitere (Schema vorbereitet, Funktion später)**
 Noch **nicht im Schema** (nur geplant): Hauptbuch (`JournalEntry`, `JournalLine`, Zahlungen – bewusst nicht geplant, siehe [FINANCE.md](FINANCE.md)), `Product`, `Warehouse`, `StockMovement`, `Project`, `Task`, `WorkflowDefinition` (versioniert), `WorkflowInstance`.
 

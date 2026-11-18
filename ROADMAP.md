@@ -121,7 +121,8 @@ Entscheidung: kein eigenes Hauptbuch; die Steuerberatung bucht. Detailplan: [FIN
 * ✅ Export **BMD (BuErf variabel, CSV)** und **DATEV (Buchungsstapel, EXTF 700/Format 13, Windows-1252)** inkl. Belegpaket (ZIP); jeder Beleg genau einmal; Exportläufe unveränderlich mit Prüfsumme; Vorabprüfung; Download im Audit-Log
 * ⚠️ **Beide Formate wurden nicht gegen echte BMD-/DATEV-Systeme getestet**, sondern nach den veröffentlichten Beschreibungen gebaut – vor Produktivbetrieb mit der Steuerberatung prüfen (u. a. Annahme zu Buchcode/Buchsymbol)
 * ✅ PDF für ausgestellte Ausgangsrechnungen und Gutschriften (`finance/invoice-pdf.ts`, ohne Zusatzbibliothek, reproduzierbar; Abruf `/finance/out/<id>/pdf`)
-* ⚠️ PDF ohne Aussteller-Anschrift, UID, Bankverbindung und Logo (nicht im Datenmodell) · keine Fremdwährung · keine Bankanbindung · keine Verknüpfung Rechnung ↔ Budget
+* ✅ Aussteller-Stammdaten (`IssuerProfile`: Anschrift, UID, Firmenbuch, IBAN/BIC, Kontakt; IBAN-Prüfsumme) im Briefkopf und in der Fußzeile des PDFs; der Stand wird beim Ausstellen am Beleg festgehalten (`issuerSnapshot`), alte PDFs bleiben unverändert
+* ⚠️ Kein Logo, keine Zahlungs-QR; vor Einführung der Stammdaten ausgestellte Rechnungen zeigen nur den Organisationsnamen · keine Fremdwährung · keine Bankanbindung · keine Verknüpfung Rechnung ↔ Budget
 
 ## M13 Wareneingang und Rechnungsabgleich
 Details: [PROCUREMENT-NEXT.md](PROCUREMENT-NEXT.md).

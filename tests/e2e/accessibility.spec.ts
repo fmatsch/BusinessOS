@@ -16,6 +16,7 @@ test("Login-Seite hat keine WCAG-A/AA-Verstöße", async ({ page }) => {
 });
 
 test("angemeldete Seiten haben keine WCAG-A/AA-Verstöße (hell und dunkel)", async ({ page }) => {
+  test.setTimeout(180_000); // 23 Seiten in zwei Farbschemata
   await login(page, "admin");
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme });

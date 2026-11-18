@@ -1012,6 +1012,8 @@ model CustomerInvoice {
   grossTotal     Decimal   @db.Decimal(19, 4)
   paidOn         DateTime? @db.Date
   note           String?
+  /// Aussteller-Angaben zum Zeitpunkt des Ausstellens (damit das PDF später unverändert bleibt)
+  issuerSnapshot Json?
   createdById    String
   issuedById     String?
   issuedAt       DateTime?
@@ -1053,6 +1055,24 @@ model AccountingProfile {
   /// DATEV: Diktatkürzel
   dictationCode        String  @default("")
   includeFiles         Boolean @default(true)
+}
+
+/// Aussteller der Ausgangsrechnungen (Briefkopf und Bankverbindung). Beim Ausstellen wird eine Kopie am Beleg gespeichert.
+model IssuerProfile {
+  organizationId  String  @id
+  legalName       String
+  street          String?
+  zip             String?
+  city            String?
+  country         String  @default("AT")
+  uid             String?
+  /// Firmenbuchnummer und -gericht, Rechtsform
+  companyRegister String?
+  iban            String?
+  bic             String?
+  bankName        String?
+  email           String?
+  phone           String?
 }
 
 /// Ein Exportlauf an die Steuerberatung. Unveränderlich (Trigger); jeder Beleg wird höchstens einmal exportiert.

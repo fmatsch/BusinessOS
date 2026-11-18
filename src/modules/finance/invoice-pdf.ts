@@ -4,8 +4,15 @@
  */
 import { Decimal } from "@/lib/money";
 
+export type IssuerDetails = {
+  legalName: string; street?: string | null; zip?: string | null; city?: string | null; country?: string | null; uid?: string | null;
+  companyRegister?: string | null; iban?: string | null; bic?: string | null; bankName?: string | null; email?: string | null; phone?: string | null;
+};
+
 export type InvoicePdfInput = {
+  /** Name des Ausstellers; Anschrift und Bankdaten sind optional (ohne Stammdaten steht nur der Name im Kopf). */
   issuer: string;
+  issuerDetails?: IssuerDetails | null;
   customer: { name: string; street?: string | null; zip?: string | null; city?: string | null; country?: string | null; uid?: string | null };
   number: string;
   kind: "INVOICE" | "CREDIT";
@@ -88,7 +95,16 @@ export function fmtAmount(v: string | Decimal, decimals = 2) {
 const fmtQty = (v: string) => fmtAmount(v, 4).replace(/,?0+$/, "").replace(/,$/, "");
 const fmtDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 
-const PAGE_W = 595, PAGE_H = 842, MARGIN = 56, BOTTOM = 90;
+/** Fußzeile: Bankverbindung, Firmenbuch, Kontakt (nur vorhandene Angaben). */
+function footerLines(inv: InvoicePdfInput): string[] {
+  const i = inv.issuerDetails;
+  if (!i) return [];
+  const bank = [i.bankName, i.iban ? `IBAN ${i.iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim()}` : "", i.bic ? `BIC ${i.bic}` : ""].filter(Boolean).join(" · ");
+  const contact = [i.email, i.phone].filter(Boolean).join(" · ");
+  return [bank, i.companyRegister ?? "", contact].filter((x) => x.trim() !== "");
+}
+
+const PAGE_W = 595, PAGE_H = 842, MARGIN = 56, BOTTOM = 100;
 
 class Page {
   ops: string[] = [];
@@ -112,7 +128,11 @@ export function renderInvoicePdf(inv: InvoicePdfInput): Uint8Array {
   let y = newPage();
   cur().text(MARGIN, y, inv.issuer, 11, true);
   cur().right(right, y, title, 22, true);
-  y -= 50;
+  const iss = inv.issuerDetails;
+  const issuerLines = iss ? [iss.street, [iss.zip, iss.city].filter(Boolean).join(" "), iss.country, iss.uid ? `UID: ${iss.uid}` : ""].filter((x): x is string => !!x && x.trim() !== "") : [];
+  let iy = y - 13;
+  for (const l of issuerLines) { cur().text(MARGIN, iy, l, 8); iy -= 11; }
+  y = Math.min(y - 50, iy - 24);
 
   // Empfänger
   const addr = [inv.customer.name, inv.customer.street, [inv.customer.zip, inv.customer.city].filter(Boolean).join(" "), inv.customer.country].filter((x): x is string => !!x && x.trim() !== "");
@@ -176,7 +196,9 @@ export function renderInvoicePdf(inv: InvoicePdfInput): Uint8Array {
   }
 
   // Fußzeile mit Seitenzahl
-  pages.forEach((p) => p.text(MARGIN, 40, `${inv.issuer} · ${inv.number}`, 8));
+  const footer = footerLines(inv);
+  pages.forEach((p) => footer.forEach((f, k) => p.text(MARGIN, 64 - k * 10, f, 7.5)));
+  pages.forEach((p) => p.text(MARGIN, 30, `${inv.issuer} · ${inv.number}`, 8));
   pages.forEach((p, i) => p.right(right, 40, `Seite ${i + 1} von ${pages.length}`, 8));
 
   return assemble(pages);

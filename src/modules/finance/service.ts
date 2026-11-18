@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { Decimal } from "@/lib/money";
@@ -8,10 +9,10 @@ import { dateFromIso, isoFromDate, addDays } from "@/modules/hr/queries";
 import { receivingOf } from "@/modules/procurement/queries";
 import { allocateTax } from "./tax";
 import { matchInvoice } from "./match";
-import { renderInvoicePdf } from "./invoice-pdf";
+import { renderInvoicePdf, type IssuerDetails } from "./invoice-pdf";
 import { sha256Hex } from "./formats/encoding";
 import {
-  accountInput, customerInput, customerInvoiceInput, paidInput, partnerAccountsInput, profileInput, supplierInvoiceInput, taxCodeInput,
+  accountInput, customerInput, issuerInput, customerInvoiceInput, paidInput, partnerAccountsInput, profileInput, supplierInvoiceInput, taxCodeInput,
 } from "./schema";
 
 type Tx = Prisma.TransactionClient;
@@ -159,6 +160,29 @@ export async function setAccountingProfile(ctx: Ctx, raw: unknown) {
     const before = await getAccountingProfile(ctx, tx);
     await tx.accountingProfile.upsert({ where: { organizationId: ctx.organizationId }, create: { organizationId: ctx.organizationId, ...data }, update: data });
     await writeAudit(tx, ctx, { action: "accounting_profile.set", entityType: "AccountingProfile", entityId: ctx.organizationId, before: before as unknown as Prisma.InputJsonValue, after: data });
+  });
+}
+
+// ───────────────────────── Aussteller ─────────────────────────
+
+export type IssuerProfileData = z.infer<typeof issuerInput>;
+
+/** Aussteller-Stammdaten (Briefkopf, Bankverbindung). null, solange nichts hinterlegt ist. */
+export async function getIssuerProfile(ctx: Ctx, tx: Tx | typeof db = db) {
+  if (tx === db) authorize(ctx, "finance.master.read");
+  const { organizationId: _o, ...rest } = (await tx.issuerProfile.findUnique({ where: { organizationId: ctx.organizationId } })) ?? { organizationId: "" };
+  return "legalName" in rest ? (rest as IssuerProfileData) : null;
+}
+
+export async function setIssuerProfile(ctx: Ctx, raw: unknown) {
+  authorize(ctx, "finance.master.write");
+  const data = issuerInput.parse(raw);
+  const clean = { ...data, uid: data.uid?.replace(/\s+/g, "").toUpperCase() ?? null, iban: data.iban?.replace(/\s+/g, "").toUpperCase() ?? null, bic: data.bic?.toUpperCase() ?? null };
+  const row = { street: null, zip: null, city: null, companyRegister: null, bankName: null, email: null, phone: null, ...clean };
+  return db.$transaction(async (tx) => {
+    const before = await getIssuerProfile(ctx, tx);
+    await tx.issuerProfile.upsert({ where: { organizationId: ctx.organizationId }, create: { organizationId: ctx.organizationId, ...row }, update: row });
+    await writeAudit(tx, ctx, { action: "issuer_profile.set", entityType: "IssuerProfile", entityId: ctx.organizationId, before: (before ?? undefined) as unknown as Prisma.InputJsonValue, after: row as unknown as Prisma.InputJsonValue });
   });
 }
 
@@ -396,7 +420,8 @@ export async function issueCustomerInvoice(ctx: Ctx, id: string) {
     const claimed = await tx.customerInvoice.updateMany({ where: { id, status: "DRAFT" }, data: { status: "ISSUED", issuedById: ctx.userId, issuedAt: new Date() } });
     if (claimed.count !== 1) throw new ConflictError("Der Beleg wurde bereits ausgestellt");
     const number = await nextNumber(tx, ctx.organizationId, "AR", inv.invoiceDate.getUTCFullYear());
-    await tx.customerInvoice.update({ where: { id }, data: { number } });
+    const issuer = await getIssuerProfile(ctx, tx);
+    await tx.customerInvoice.update({ where: { id }, data: { number, issuerSnapshot: (issuer ?? undefined) as unknown as Prisma.InputJsonValue | undefined } });
     await writeAudit(tx, ctx, { action: "customer_invoice.issue", entityType: "CustomerInvoice", entityId: id, after: { number, gross: inv.grossTotal.toString() } });
     return number;
   });
@@ -459,9 +484,11 @@ export async function getCustomerInvoicePdf(ctx: Ctx, id: string) {
     db.organization.findFirst({ where: { id: ctx.organizationId }, select: { name: true } }),
     inv.creditsId ? db.customerInvoice.findFirst({ where: { id: inv.creditsId, organizationId: ctx.organizationId }, select: { number: true } }) : Promise.resolve(null),
   ]);
+  const snap = (inv.issuerSnapshot ?? null) as IssuerDetails | null; // Stand zum Zeitpunkt des Ausstellens
   const rate = new Map(inv.taxCodes.map((t) => [t.id, t.rate.toString()]));
   const bytes = renderInvoicePdf({
-    issuer: org?.name ?? "",
+    issuer: snap?.legalName ?? org?.name ?? "",
+    issuerDetails: snap ?? null,
     customer: inv.customer,
     number: inv.number,
     kind: inv.kind === "CREDIT" ? "CREDIT" : "INVOICE",

@@ -49,6 +49,29 @@ export const profileInput = z.object({
   includeFiles: z.coerce.boolean(),
 });
 
+/** IBAN-Prüfsumme (ISO 13616, Modulo 97). */
+export function isValidIban(iban: string) {
+  const s = iban.replace(/\s+/g, "").toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(s)) return false;
+  const digits = (s.slice(4) + s.slice(0, 4)).replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
+  let rem = 0;
+  for (const ch of digits) rem = (rem * 10 + Number(ch)) % 97;
+  return rem === 1;
+}
+
+export const issuerInput = z.object({
+  legalName: z.string().trim().min(1).max(120),
+  street: optText(120), zip: optText(12), city: optText(80),
+  country: z.string().trim().length(2).toUpperCase().default("AT"),
+  uid: optText(20).refine((v) => v == null || /^[A-Za-z]{2}[A-Za-z0-9]{2,12}$/.test(v.replace(/\s+/g, "")), "UID: Länderkürzel und Ziffern, z. B. ATU12345678"),
+  companyRegister: optText(120),
+  iban: optText(40).refine((v) => v == null || isValidIban(v), "IBAN ist ungültig (Prüfsumme)"),
+  bic: optText(11).refine((v) => v == null || /^[A-Za-z]{6}[A-Za-z0-9]{2}([A-Za-z0-9]{3})?$/.test(v), "BIC ist ungültig"),
+  bankName: optText(80),
+  email: optText(120).refine((v) => v == null || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "E-Mail ist ungültig"),
+  phone: optText(40),
+});
+
 const supplierLine = z.object({
   description: z.string().trim().min(1).max(200),
   netAmount: decimalString.refine((d) => d.gt(0), "Nettobetrag muss größer als 0 sein").refine((d) => d.decimalPlaces() <= 2, "Höchstens 2 Nachkommastellen"),

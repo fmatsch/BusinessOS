@@ -6,7 +6,7 @@ import { addEmployment, addLeaveEntry, closeEmployment, createEmployee, decideAb
 import { addShift, assignEmployee, createQualification, createRoster, createSite, createTemplate, decideSwap, getRoster, getRules, listRosters, publishRoster, removeShift, requestSwap, setEmployeeQualification, setRules, unassignEmployee } from "./roster/service";
 import { addAccountAdjustment, addEntryDirect, cancelRequest, clockIn, clockOut, correctEntryDirect, deleteEntryDirect, discardClock, endBreak, getClock, getPayCodeRules, listTeam, reopenPeriod, requestEntry, setPayCodeRules, startBreak, submitPeriod } from "./time/service";
 import { createExport, getExportFile, getProfile, listExports, setProfile } from "./payroll/service";
-import { acceptInvoiceVariance, getInvoiceMatch, approveSupplierInvoice, cancelCustomerInvoiceDraft, createAccount, createCustomer, createCustomerInvoice, createSupplierInvoice, createTaxCode, financeOverview, getAccountingProfile, getCustomerInvoice, getFile, getSupplierInvoice, importAccounts, issueCustomerInvoice, listAccounts, listCustomerInvoices, listCustomers, listSupplierInvoices, listTaxCodes, markSupplierInvoicePaid, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, updateTaxMapping, uploadFile } from "./finance/service";
+import { acceptInvoiceVariance, getInvoiceMatch, approveSupplierInvoice, cancelCustomerInvoiceDraft, createAccount, createCustomer, createCustomerInvoice, createSupplierInvoice, createTaxCode, financeOverview, getAccountingProfile, getCustomerInvoice, getCustomerInvoicePdf, getIssuerProfile, setIssuerProfile, getFile, getSupplierInvoice, importAccounts, issueCustomerInvoice, listAccounts, listCustomerInvoices, listCustomers, listSupplierInvoices, listTaxCodes, markSupplierInvoicePaid, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, updateTaxMapping, uploadFile } from "./finance/service";
 import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./finance/export";
 import { budgetOverview, committedByDepartment, setBudget } from "./budget/service";
 import { createCostCenter, createDepartment, listCostCenters, listDepartments } from "./masterdata/service";
@@ -96,7 +96,10 @@ const protectedOperations: [string, Permission, () => Promise<unknown>][] = [
   ["createCustomer", "finance.master.write", () => createCustomer(none, { number: "1", name: "x" })],
   ["setSupplierAccounts", "finance.master.write", () => setSupplierAccounts(none, "x", {})],
   ["setCustomerAccounts", "finance.master.write", () => setCustomerAccounts(none, "x", {})],
+  ["setIssuerProfile", "finance.master.write", () => setIssuerProfile(none, { legalName: "x" })],
   ["setAccountingProfile", "finance.master.write", () => setAccountingProfile(none, { format: "BMD", accountLength: 4, fiscalYearStartMonth: 1, symbolIn: "ER", symbolOut: "AR", includeFiles: true })],
+  ["getIssuerProfile", "finance.master.read", () => getIssuerProfile(none)],
+  ["getCustomerInvoicePdf", "finance.invoice.read", () => getCustomerInvoicePdf(none, "x")],
   ["getAccountingProfile", "finance.export.read", () => getAccountingProfile(none)],
   ["uploadFile", "finance.invoice.in.create", () => uploadFile(none, { name: "x.pdf", bytes: new Uint8Array([1]) })],
   ["getFile", "finance.invoice.read", () => getFile(none, "x")],

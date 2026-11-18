@@ -3,7 +3,7 @@ import { listSuppliers } from "@/modules/procurement/service";
 import { requireContext } from "@/platform/tenancy/context";
 import { can } from "@/platform/authz/authorize";
 import {
-  createAccount, createCustomer, createTaxCode, getAccountingProfile, importAccounts, listAccounts, listCustomers, listTaxCodes, setAccountingProfile,
+  createAccount, createCustomer, createTaxCode, getAccountingProfile, getIssuerProfile, importAccounts, listAccounts, listCustomers, listTaxCodes, setAccountingProfile, setIssuerProfile,
   setCustomerAccounts, setSupplierAccounts, updateTaxMapping,
 } from "@/modules/finance/service";
 import { ErrorBanner, runAction } from "../../action-helpers";
@@ -28,6 +28,14 @@ async function saveProfile(fd: FormData) {
   revalidatePath(BACK);
 }
 
+async function saveIssuer(fd: FormData) {
+  "use server";
+  const ctx = await requireContext();
+  const f = (k: string) => fd.get(k);
+  await runAction(BACK, () => setIssuerProfile(ctx, { legalName: f("legalName"), street: f("street"), zip: f("zip"), city: f("city"), country: f("country") || "AT", uid: f("uid"), companyRegister: f("companyRegister"), iban: f("iban"), bic: f("bic"), bankName: f("bankName"), email: f("email"), phone: f("phone") }));
+  revalidatePath(BACK);
+}
+
 const TYPE: Record<string, string> = { GL: "Sachkonto", VENDOR: "Kreditor", CUSTOMER: "Debitor" };
 
 export default async function FinanceSettings({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -35,10 +43,11 @@ export default async function FinanceSettings({ searchParams }: { searchParams: 
   const ctx = await requireContext();
   if (!can(ctx, "finance.master.read")) return <p>Dafür fehlt Ihnen die Berechtigung.</p>;
   const writer = can(ctx, "finance.master.write");
-  const [accounts, taxCodes, customers, suppliers, profile] = await Promise.all([
+  const [accounts, taxCodes, customers, suppliers, profile, issuer] = await Promise.all([
     listAccounts(ctx), listTaxCodes(ctx), listCustomers(ctx),
     can(ctx, "procurement.supplier.read") ? listSuppliers(ctx) : Promise.resolve([]),
     getAccountingProfile(ctx).catch(() => null),
+    getIssuerProfile(ctx),
   ]);
   const activeSuppliers = suppliers.filter((s) => s.active);
   const gl = accounts.filter((a) => a.type === "GL" && a.active), vendors = accounts.filter((a) => a.type === "VENDOR" && a.active), debtors = accounts.filter((a) => a.type === "CUSTOMER" && a.active);
@@ -52,6 +61,28 @@ export default async function FinanceSettings({ searchParams }: { searchParams: 
     <div className="max-w-5xl space-y-10">
       <h1 className="text-2xl font-semibold tracking-tight">Finanzen: Einstellungen</h1>
       <ErrorBanner message={error} />
+
+      <section className="space-y-2" aria-label="Aussteller">
+        <h2 className="font-medium">Aussteller (Briefkopf der Rechnungen)</h2>
+        <p className="text-sm text-muted">Erscheint auf dem PDF der Ausgangsrechnungen. Beim Ausstellen wird der aktuelle Stand am Beleg gespeichert; spätere Änderungen betreffen nur neue Rechnungen. Welche Angaben auf einer Rechnung Pflicht sind (z. B. Anschrift und UID des Ausstellers), regelt das Umsatzsteuergesetz; bitte mit der Steuerberatung abstimmen.</p>
+        {writer ? (
+          <form action={saveIssuer} className="grid gap-3 rounded-xl border border-line bg-surface p-4 text-sm sm:grid-cols-6">
+            <label className="sm:col-span-3">Firmenname<input name="legalName" required maxLength={120} defaultValue={issuer?.legalName ?? ""} className={input + " w-full"} /></label>
+            <label className="sm:col-span-3">Straße<input name="street" maxLength={120} defaultValue={issuer?.street ?? ""} className={input + " w-full"} /></label>
+            <label>PLZ<input name="zip" maxLength={12} defaultValue={issuer?.zip ?? ""} className={input} /></label>
+            <label className="sm:col-span-2">Ort<input name="city" maxLength={80} defaultValue={issuer?.city ?? ""} className={input + " w-full"} /></label>
+            <label>Land (2 Buchstaben)<input name="country" maxLength={2} defaultValue={issuer?.country ?? "AT"} className={input} /></label>
+            <label>UID<input name="uid" maxLength={20} defaultValue={issuer?.uid ?? ""} className={input} /></label>
+            <label className="sm:col-span-3">Firmenbuch / Rechtsform<input name="companyRegister" maxLength={120} defaultValue={issuer?.companyRegister ?? ""} className={input + " w-full"} placeholder="FN 123456a, Handelsgericht Wien" /></label>
+            <label className="sm:col-span-3">IBAN<input name="iban" maxLength={40} defaultValue={issuer?.iban ?? ""} className={input + " w-full"} /></label>
+            <label>BIC<input name="bic" maxLength={11} defaultValue={issuer?.bic ?? ""} className={input} /></label>
+            <label className="sm:col-span-2">Bank<input name="bankName" maxLength={80} defaultValue={issuer?.bankName ?? ""} className={input + " w-full"} /></label>
+            <label className="sm:col-span-2">E-Mail<input name="email" maxLength={120} defaultValue={issuer?.email ?? ""} className={input + " w-full"} /></label>
+            <label>Telefon<input name="phone" maxLength={40} defaultValue={issuer?.phone ?? ""} className={input} /></label>
+            <div className="sm:col-span-6"><button className={primary}>Aussteller speichern</button></div>
+          </form>
+        ) : <p className="text-sm">{issuer ? `${issuer.legalName}${issuer.city ? `, ${issuer.city}` : ""}` : "Noch nicht hinterlegt."}</p>}
+      </section>
 
       {profile && (
         <section className="space-y-2">

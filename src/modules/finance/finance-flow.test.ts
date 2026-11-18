@@ -9,7 +9,7 @@ import {
   approveSupplierInvoice, cancelCustomerInvoiceDraft, cancelSupplierInvoice, createAccount, createCreditNoteDraft, createCustomer, createCustomerInvoice,
   createSupplierInvoice, createTaxCode, getFile, importAccounts, issueCustomerInvoice, listAccounts, markCustomerInvoicePaid, markSupplierInvoicePaid,
   safeFileName, setAccountingProfile, setCustomerAccounts, setSupplierAccounts, sniffMime, updateTaxMapping, uploadFile, getSupplierInvoice, getCustomerInvoice,
-  listSupplierInvoices, getCustomerInvoicePdf,
+  listSupplierInvoices, getCustomerInvoicePdf, getIssuerProfile, setIssuerProfile,
 } from "./service";
 import { createAccountingExport, getAccountingExportFile, listAccountingExports, previewAccountingExport } from "./export";
 
@@ -93,7 +93,7 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
     const orgs = [orgA, orgB];
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.allow_journal_delete', 'on', true)`;
-      for (const m of ["accountingExport", "auditLog", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "sequence", "supplier", "costCenter"] as const)
+      for (const m of ["accountingExport", "auditLog", "supplierInvoice", "customerInvoice", "financeFile", "customer", "taxCode", "account", "accountingProfile", "issuerProfile", "sequence", "supplier", "costCenter"] as const)
         await (tx[m] as unknown as { deleteMany(a: unknown): Promise<unknown> }).deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.organizationMembership.deleteMany({ where: { organizationId: { in: orgs } } });
       await tx.user.deleteMany({ where: { id: { in: userIds } } });
@@ -338,6 +338,29 @@ describe.skipIf(!hasDb)("Finanzen: Belege und Export an die Steuerberatung", () 
       expect(row[9]).toBe("1503");
       expect(ok.fileName).toBe(`EXTF_Buchungsstapel_${String(ok.version).padStart(4, "0")}.csv`);
       expect((await getAccountingExportFile(c.fin!, ok.id, "data")).bytes.includes(0xfc)).toBe(true); // „Müller" als ein Byte (Windows-1252)
+    });
+  });
+
+  describe("Aussteller", () => {
+    it("Stammdaten: nur Finanzen schreiben, Prüfungen, Mandantentrennung; Stand wird beim Ausstellen am Beleg festgehalten", async () => {
+      expect(await getIssuerProfile(c.fin!)).toBeNull();
+      await expect(setIssuerProfile(c.emp!, { legalName: "x" })).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(setIssuerProfile(c.fin!, { legalName: "Muster GmbH", iban: "AT61 1904 3002 3457 3202" })).rejects.toThrow(/IBAN/);
+      await setIssuerProfile(c.fin!, { legalName: "Muster GmbH", street: "Ringstraße 5", zip: "1010", city: "Wien", uid: "atu 1111 1111", iban: "at61 1904 3002 3457 3201" });
+      const p = await getIssuerProfile(c.fin!);
+      expect(p).toMatchObject({ legalName: "Muster GmbH", uid: "ATU11111111", iban: "AT611904300234573201", country: "AT" });
+      expect(await getIssuerProfile(c.finB!)).toBeNull();
+
+      const draft = await createCustomerInvoice(c.fin!, { customerId: ids.customer, invoiceDate: d(3, 2), lines: [{ description: "Beratung", quantity: "1", unitPrice: "10", taxCodeId: ids.ust20 }] });
+      await issueCustomerInvoice(c.fin!, draft.id);
+      const before = await getCustomerInvoicePdf(c.fin!, draft.id);
+      expect(Buffer.from(before.bytes).toString("latin1")).toContain("AT61 1904 3002 3457 3201");
+
+      await setIssuerProfile(c.fin!, { legalName: "Neue Firma AG", iban: "DE89 3704 0044 0532 0130 00" });
+      const after = await getCustomerInvoicePdf(c.fin!, draft.id);
+      expect(Buffer.from(after.bytes).equals(Buffer.from(before.bytes))).toBe(true); // alter Beleg bleibt unverändert
+      const audit = await db.auditLog.count({ where: { organizationId: orgA, action: "issuer_profile.set" } });
+      expect(audit).toBe(2);
     });
   });
 });

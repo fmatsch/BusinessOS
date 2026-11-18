@@ -113,6 +113,23 @@ test.describe.serial("Finanzen und Export an die Steuerberatung (Browser)", () =
     await logout(page);
   });
 
+  test("Aussteller: ungültige IBAN wird abgewiesen, gültige Angaben erscheinen im Rechnungs-PDF", async ({ page }) => {
+    await login(page, "admin");
+    await page.goto("/finance/settings");
+    const f = page.getByRole("region", { name: "Aussteller" }).locator("form");
+    await f.getByLabel("Firmenname").fill("Musterfirma E2E GmbH");
+    await f.getByLabel("IBAN").fill("AT61 1904 3002 3457 3202");
+    await f.getByRole("button", { name: "Aussteller speichern" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: /IBAN/ })).toBeVisible();
+    await f.getByLabel("Firmenname").fill("Musterfirma E2E GmbH"); // nach dem Fehler ist das Formular zurückgesetzt
+    await f.getByLabel("IBAN").fill("AT61 1904 3002 3457 3201");
+    await f.getByRole("button", { name: "Aussteller speichern" }).click();
+    await page.waitForTimeout(500);
+    await page.goto("/finance/settings");
+    await expect(page.getByRole("region", { name: "Aussteller" }).getByLabel("IBAN")).toHaveValue("AT611904300234573201");
+    await logout(page);
+  });
+
   test("Eingangsrechnung mit Beleg: erfassen, Vier-Augen-Freigabe durch Finanzen", async ({ page }) => {
     await login(page, "admin");
     const url = await newSupplierInvoice(page, `RE-${tag}-1`, "100");
@@ -171,6 +188,7 @@ test.describe.serial("Finanzen und Export an die Steuerberatung (Browser)", () =
     const body = (await res.body()).toString("latin1");
     expect(body.startsWith("%PDF-")).toBe(true);
     expect(body).toMatch(/\(AR-\d{4}-\d{4}\)/);
+    expect(body).toContain("AT61 1904 3002 3457 3201");
     await logout(page);
   });
 
