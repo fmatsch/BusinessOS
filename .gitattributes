@@ -1,0 +1,4 @@
+# Zeilenenden: Migrationen und Shell-Skripte immer mit LF (Prüfsummen von Prisma, Ausführung unter Linux)
+prisma/migrations/**/migration.sql text eol=lf
+*.sh text eol=lf
+installer/lib/ubuntu-script.mjs text eol=lf
